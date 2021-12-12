@@ -49,16 +49,15 @@ def c_round(complex_number):
 
 
 @njit
-def vector_to_focal_units(vector, focal_distance, dpi):
+def vector_to_focal_units(vector, focal_distance, pixels_per_f_distance):
     """Calculates the projection of a pixel.
 
     With the projection of a pixel, you can use an inverse_mapping_function to get the lens angle of it
     The projection is 'normalized' using the focal distance as the factor, therefore, 'normalized' may be a
     misnomer in case of a  any mapping function that produces values bigger than 1.
     """
-    dpmm = dpi_to_dpmm(dpi)
     opposite_side = vector_magnitude(vector)
-    adjacent_side = focal_distance * dpmm
+    adjacent_side = focal_distance * pixels_per_f_distance
 
     normalized_projection_magnitude = np.absolute(opposite_side / adjacent_side)
 
@@ -73,15 +72,14 @@ def calculate_lens_angle(vector, f_distance, dpi, inverse_mapping_function):
 
 
 @njit
-def calculate_dpi(vector, angle, f_distance, mapping_function):
+def calculate_pixels_per_f_distance(vector, angle, f_distance, mapping_function):
     half_angle = angle / 2
     quasi_magnitude = mapping_function(half_angle) * f_distance
     v_magnitude = vector_magnitude(vector)
-    dpmm = v_magnitude / quasi_magnitude
-    dpis = dpmm * 25.4
-    return dpis
+    pixels_pfd = v_magnitude / quasi_magnitude
+    return pixels_pfd
 
-
+"""
 @njit
 def calculate_f_distance(vector, angle, dpi, mapping_function):
     half_angle = angle / 2
@@ -90,3 +88,4 @@ def calculate_f_distance(vector, angle, dpi, mapping_function):
     v_magnitude = vector_magnitude(vector)
     f_distance = v_magnitude / (quasi_magnitude * dpmm)
     return f_distance
+"""
