@@ -12,9 +12,9 @@ _source_focal_distance = 1.0
 
 
 @njit
-def process_image(src_image_arr, lens_angle, source_function, source_inverse_function, destiny_function,
-                  destiny_inverse_function,
-                  fullframe):
+def change_lens(src_image_arr, lens_angle, source_function, source_inverse_function, destiny_function,
+                destiny_inverse_function,
+                fullframe):
     """
     Firstly, the program reads the position from the destination, calculates the theta angle of the destination
     and then it translates it to a position on the origin, reads such position and writes it on the position
@@ -60,7 +60,7 @@ def light_adjustment(src_image_arr, source_fd_pixels, source_function, destiny_s
 
     destiny_width, destiny_height = c_round(destiny_size)
     destiny_center = destiny_size / 2 - _half_pixel_vector
-    destiny_array = np.zeros((destiny_height, destiny_width, 3), 'uint8')
+    destiny_array = np.zeros((destiny_height, destiny_width, 3), np.core.uint8)
 
     # SUPER SAMPLING DATA
     ss_pixel_center = complex((super_sampling_factor - 1) / 2, (super_sampling_factor - 1) / 2)
@@ -70,7 +70,7 @@ def light_adjustment(src_image_arr, source_fd_pixels, source_function, destiny_s
         for column in prange(destiny_width):
 
             # SUPER SAMPLING ROUNDS
-            ss_matrix = np.zeros((super_sampling_factor, super_sampling_factor, 3), 'uint8')
+            ss_matrix = np.zeros((super_sampling_factor, super_sampling_factor, 3), np.core.uint8)
             for ss_row in prange(super_sampling_factor):
                 for ss_column in prange(super_sampling_factor):
                     ss_position = (complex(ss_column, ss_row) - ss_pixel_center) * ss_subpixel_distance

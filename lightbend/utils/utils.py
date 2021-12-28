@@ -78,14 +78,3 @@ def calculate_pixels_per_f_distance(vector, angle, f_distance, mapping_function)
     v_magnitude = vector_magnitude(vector)
     pixels_pfd = v_magnitude / quasi_magnitude
     return pixels_pfd
-
-"""
-@njit
-def calculate_f_distance(vector, angle, dpi, mapping_function):
-    half_angle = angle / 2
-    dpmm = dpi_to_dpmm(dpi)
-    quasi_magnitude = mapping_function(half_angle)
-    v_magnitude = vector_magnitude(vector)
-    f_distance = v_magnitude / (quasi_magnitude * dpmm)
-    return f_distance
-"""

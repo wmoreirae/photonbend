@@ -1,10 +1,9 @@
 import numpy as np
 from PIL import Image
 
-from lightbend.mapping import equisolid, equisolid_inverse, rectilinear, rectilinear_inverse, stereographic, \
-    stereographic_inverse
+from lightbend.lens import equisolid, equisolid_inverse, rectilinear, rectilinear_inverse
 
-from lightbend.imaging import process_image
+from lightbend.camera.imaging import change_lens
 from lightbend.utils import degrees_to_radians
 
 if __name__ == '__main__':
@@ -13,12 +12,12 @@ if __name__ == '__main__':
 
     del origin_image
 
-    destiny_array = process_image(origin_arr, degrees_to_radians(155),
-                                  equisolid,
-                                  equisolid_inverse,
-                                  rectilinear,
-                                  rectilinear_inverse,
-                                  True)
+    destiny_array = change_lens(origin_arr, degrees_to_radians(155),
+                                equisolid,
+                                equisolid_inverse,
+                                rectilinear,
+                                rectilinear_inverse,
+                                True)
 
     del origin_arr
     destiny_image = Image.fromarray(destiny_array)

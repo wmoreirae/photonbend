@@ -10,6 +10,12 @@ def rectilinear_inverse(projection_in_focal_distance_units):
 
 @njit
 def rectilinear(theta):
+    """Mapping that uses the angle tangent
+
+    As it uses the angle tangent, it should not be used with lens angles closing on 180 degrees.
+    It is best to limit its use to lens angles of at most 165 degrees.
+    As the angle presented is halved, it should not see a theta angle larger than 82.5 degrees.
+    """
     return np.tan(theta)
 
 
