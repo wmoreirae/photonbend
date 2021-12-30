@@ -39,6 +39,8 @@ def vector_from_coordinates(x, y):
 @njit
 def unit_vector(vector):
     magnitude = vector_magnitude(vector)
+    if 0 == magnitude:
+        return complex(0, 0)
     u_vector = vector / magnitude
     return u_vector
 

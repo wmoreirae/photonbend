@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit
-
+from lightbend.utils import degrees_to_radians
 
 @njit
 def rectilinear_inverse(projection_in_focal_distance_units):
@@ -16,6 +16,9 @@ def rectilinear(theta):
     It is best to limit its use to lens angles of at most 165 degrees.
     As the angle presented is halved, it should not see a theta angle larger than 82.5 degrees.
     """
+    assert theta > 0
+    if theta > degrees_to_radians(165):
+        raise ValueError('The rectilinear function was not made to handle angles larger than 165 degrees')
     return np.tan(theta)
 
 
@@ -69,5 +72,5 @@ def orthographic_inverse(projection_in_focal_distance_units):
 
 @njit
 def orthographic(theta):
-    angle = np.sin(theta)
-    return angle
+    projection = np.sin(theta)
+    return projection

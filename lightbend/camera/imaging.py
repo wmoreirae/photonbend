@@ -2,8 +2,7 @@ import numpy as np
 from PIL import Image
 from numba import njit, prange
 
-from lightbend.utils import vector_magnitude, radians_to_degrees, degrees_to_radians, calculate_pixels_per_f_distance, \
-    dpi_to_dpmm, \
+from lightbend.utils import vector_magnitude, degrees_to_radians, calculate_pixels_per_f_distance, \
     unit_vector, vector_to_focal_units, c_round
 
 # Some default values
@@ -14,7 +13,7 @@ _source_focal_distance = 1.0
 @njit
 def change_lens(src_image_arr, lens_angle, source_function, source_inverse_function, destiny_function,
                 destiny_inverse_function,
-                fullframe):
+                crop):
     """
     Firstly, the program reads the position from the destination, calculates the theta angle of the destination
     and then it translates it to a position on the origin, reads such position and writes it on the position
@@ -28,12 +27,7 @@ def change_lens(src_image_arr, lens_angle, source_function, source_inverse_funct
     source_fd_pixels = calculate_pixels_per_f_distance(source_center, lens_angle, _source_focal_distance,
                                                        source_function)
 
-    # Calculate the max angle of the lens
-    if fullframe:
-        max_vector_o = source_center
-    else:
-        max_vector_o = complex(source_center.real, 0)
-
+    max_vector_o = source_center
     destiny_focal_distance = compute_destiny_focal_distance(destiny_function, lens_angle, max_vector_o,
                                                             source_fd_pixels)
 
@@ -42,8 +36,11 @@ def change_lens(src_image_arr, lens_angle, source_function, source_inverse_funct
 
     super_sampling_factor = 3
 
+    frame_size = compute_frame_size(source_size, source_fd_pixels, source_inverse_function, destiny_function,
+                                    crop=crop)
+
     # Create the destiny array
-    destiny_size = np.round(source_size * quality_factor)
+    destiny_size = np.round(frame_size * quality_factor)
     destiny_array = light_adjustment(src_image_arr, source_fd_pixels, source_function, destiny_size, destiny_fd_pixels,
                                      destiny_focal_distance, destiny_inverse_function, super_sampling_factor)
 
@@ -91,7 +88,7 @@ def light_adjustment(src_image_arr, source_fd_pixels, source_function, destiny_s
                     if 0 <= column_o < source_width and 0 <= row_o < source_height:
                         ss_matrix[ss_row, ss_column, :] = src_image_arr[row_o, column_o, :]
 
-            # if 0 <= column_o < source_width and 0 <= row_o < source_height:
+            # Calculate the pixel mean and assign it!
             ss_mean_1st = np.mean(ss_matrix[:, :, 0])
             ss_mean_2nd = np.mean(ss_matrix[:, :, 1])
             ss_mean_3rd = np.mean(ss_matrix[:, :, 2])
@@ -102,8 +99,71 @@ def light_adjustment(src_image_arr, source_fd_pixels, source_function, destiny_s
 
 
 @njit
+def compute_frame_size(source_size, source_fd_pixels, source_inverse_function, destiny_function, crop: bool):
+    """Used to compute the correct frame size taking into consideration the destiny function and the crop parameter
+
+    This function takes the source size and measures the destination of takes 3 special points:
+    - A vertex
+    - The bottom side midpoint
+    - The right side midpoint
+
+    Using those points, it calculates their destiny coordinates on the new image and either crops or enlarge the
+    are of the image to accommodate them, according to the crop parameter.
+
+    Obs.: The focal distance for this function is assumed to be 1 (One). As such it can be ignored for all intents
+    and purposes.
+    """
+
+    # Acquires each position on the source image.
+    vertex = source_size / 2 / source_fd_pixels
+    mid_h = complex(0, vertex.imag)
+    mid_v = complex(vertex.real, 0)
+
+    # Produce vectors that indicate the angles of each pair of coordinates.
+    vertex_unit = unit_vector(vertex)
+    mid_h_unit = unit_vector(mid_h)
+    mid_v_unit = unit_vector(mid_v)
+
+    # Produce new coordinates (based on focal distance, not pixels).
+    p_vertex = vertex_unit * destiny_function(source_inverse_function(vector_magnitude(vertex)))
+    p_mid_h = mid_h_unit * destiny_function(source_inverse_function(vector_magnitude(mid_h)))
+    p_mid_v = mid_v_unit * destiny_function(source_inverse_function(vector_magnitude(mid_v)))
+
+    # Takes max and min to allow comparisons and cropping.
+    factor_h_min = min([p_vertex.real,
+                        p_mid_v.real])
+
+    factor_h_max = max([p_vertex.real,
+                        p_mid_v.real])
+
+    factor_v_min = min([p_vertex.imag,
+                        p_mid_h.imag])
+
+    factor_v_max = max([p_vertex.imag,
+                        p_mid_h.imag])
+
+    # Creates binary vectors to ease the calculations.
+    factor_max = np.array([factor_h_max, factor_v_max])
+    factor_min = np.array([factor_h_min, factor_v_min])
+    source_size_arr = np.array([source_size.real, source_size.imag])
+
+    # Sets a default value.
+    c_factor_arr = np.array([1.0, 1.0])
+
+    if crop:
+        c_factor_arr = factor_min / factor_max
+    elif factor_max[0] > p_vertex.real:
+        c_factor_arr = factor_max / factor_min
+
+    frame_size_arr = source_size_arr * c_factor_arr
+    frame_size = complex(frame_size_arr[0], frame_size_arr[1])
+    return frame_size
+
+
+@njit
 def compute_destiny_focal_distance(function_destiny, lens_angle, max_vector_source, pixels_fd_source):
     """Compute the focal distance of the destiny lens so it can have the same angle as the origin lens"""
+    # TODO change this function to accept images with barrel distortion
     f_factor = vector_magnitude(max_vector_source) / (function_destiny(lens_angle / 2) * pixels_fd_source)
     f_distance_d = _source_focal_distance * f_factor
     return f_distance_d
