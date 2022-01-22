@@ -13,7 +13,7 @@ _source_focal_distance = 1.0
 @njit
 def change_lens(src_image_arr, lens_angle, source_function, source_inverse_function, destiny_function,
                 destiny_inverse_function,
-                crop):
+                source_cropped, crop):
     """
     Firstly, the program reads the position from the destination, calculates the theta angle of the destination
     and then it translates it to a position on the origin, reads such position and writes it on the position

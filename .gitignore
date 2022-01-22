@@ -1,4 +1,5 @@
 results/**
+notebooks/**
 
 __pycache__/
 *.py[cod]

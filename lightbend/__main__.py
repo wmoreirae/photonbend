@@ -6,11 +6,23 @@ from lightbend.lens import equisolid, equisolid_inverse, rectilinear, rectilinea
 
 from lightbend.camera.imaging import change_lens
 from lightbend.utils import degrees_to_radians
+from lightbend.conversion.circular_180.mercator import make_panoramic
 
 if __name__ == '__main__':
-    origin_image = Image.open('./images/Panotools5618_upper.jpg')
+    origin_image = Image.open('./images/fisheye_180.jpg')
     origin_arr = np.asarray(origin_image)
 
+    destiny_array = make_panoramic(source=origin_arr,
+                                   source_function=equisolid,
+                                   inverse_source_function=equisolid_inverse)
+                                   # destiny_function=equidistant,
+                                   # inverse_destiny_function=equidistant_inverse)
+
+    del origin_arr
+    destiny_image = Image.fromarray(destiny_array)
+    del destiny_array
+
+    """
     del origin_image
 
     destiny_array = change_lens(origin_arr, degrees_to_radians(160),
@@ -23,6 +35,6 @@ if __name__ == '__main__':
     del origin_arr
     destiny_image = Image.fromarray(destiny_array)
     del destiny_array
+    """
 
-
-    destiny_image.save('results/PanoTools.jpg')
+    destiny_image.save('results/Pano180.jpg')
