@@ -1,14 +1,14 @@
 import numpy as np
-from numba import njit
+from numba import njit, float64, cfunc
 from lightbend.utils import degrees_to_radians
 
-@njit
+@cfunc(float64(float64))
 def rectilinear_inverse(projection_in_focal_distance_units):
     theta = np.arctan(projection_in_focal_distance_units)
     return theta
 
 
-@njit
+@cfunc(float64(float64))
 def rectilinear(theta):
     """Mapping that uses the angle tangent
 
@@ -22,7 +22,7 @@ def rectilinear(theta):
     return np.tan(theta)
 
 
-@njit
+@cfunc(float64(float64))
 def stereographic_inverse(projection_in_focal_distance_units):
     half_tan_theta = projection_in_focal_distance_units / 2
     half_theta = np.arctan(half_tan_theta)
@@ -30,7 +30,7 @@ def stereographic_inverse(projection_in_focal_distance_units):
     return theta
 
 
-@njit
+@cfunc(float64(float64))
 def stereographic(theta):
     half_theta = theta / 2
     half_projection = np.tan(half_theta)
@@ -38,17 +38,17 @@ def stereographic(theta):
     return projection
 
 
-@njit
+@cfunc(float64(float64))
 def equidistant_inverse(projection_in_focal_distance_units):
     return projection_in_focal_distance_units
 
 
-@njit
+@cfunc(float64(float64))
 def equidistant(theta):
     return theta
 
 
-@njit
+@cfunc(float64(float64))
 def equisolid_inverse(projection_in_focal_distance_units):
     half_sin_theta = projection_in_focal_distance_units / 2
     half_theta = np.arcsin(half_sin_theta)
@@ -56,7 +56,7 @@ def equisolid_inverse(projection_in_focal_distance_units):
     return theta
 
 
-@njit
+@cfunc(float64(float64))
 def equisolid(theta):
     half_theta = theta / 2
     half_projection = np.sin(half_theta)
@@ -64,13 +64,13 @@ def equisolid(theta):
     return projection
 
 
-@njit
+@cfunc(float64(float64))
 def orthographic_inverse(projection_in_focal_distance_units):
     theta = np.arcsin(projection_in_focal_distance_units)
     return theta
 
 
-@njit
+@cfunc(float64(float64))
 def orthographic(theta):
     projection = np.sin(theta)
     return projection
