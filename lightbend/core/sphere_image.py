@@ -8,21 +8,6 @@ from lightbend.utils import degrees_to_radians, radians_to_degrees
 from lightbend.exceptions.coordinates_out_of_image import CoordinatesOutOfImage
 
 
-@cfunc(float64(float64))
-def _a(_b):
-    return _b
-
-spec = [
-    ('center', complex128),
-    ('image_type', int64),
-    ('fov', float64),
-    ('dpf', float64),
-    ('image', uint8[:, :, :]),
-    ('lens', typeof(_a)),
-    ('i_lens', typeof(_a)),
-]
-
-
 @njit
 def vector_magnitude(vector):
     return np.sqrt(vector.real ** 2 + vector.imag ** 2)
@@ -40,6 +25,22 @@ class ImageType(IntEnum):
     CROPPED_CIRCLE = auto()
     INSCRIBED = auto()
     DOUBLE_INSCRIBED = auto()
+
+
+@cfunc(float64(float64))
+def _a(_b):
+    return _b
+
+
+spec = [
+    ('center', complex128),
+    ('image_type', int64),
+    ('fov', float64),
+    ('dpf', float64),
+    ('image', uint8[:, :, :]),
+    ('lens', typeof(_a)),
+    ('i_lens', typeof(_a)),
+]
 
 
 @jitclass(spec)
@@ -76,9 +77,20 @@ class SphereImageInscribed:
         :return: None
         """
         maximum_lens_angle = self.fov / 2
-        maximum_image_magnitude = self.center.real
+        maximum_image_magnitude = self._get_maximum_image_magnitude()
         lens_max_angle_magnitude = self.lens(maximum_lens_angle)
         self.dpf = maximum_image_magnitude / lens_max_angle_magnitude
+
+    def _get_maximum_image_magnitude(self):
+        if self.image_type == ImageType.FULL_FRAME:
+            return vector_magnitude(self.center)
+        elif self.image_type == ImageType.CROPPED_CIRCLE:
+            return self.center.real
+        elif self.image_type == ImageType.INSCRIBED:
+            return self.center.real
+        elif self.image_type == ImageType.DOUBLE_INSCRIBED:
+            # TODO
+            raise NotImplementedError("The functionality for double inscribed images has not been finished")
 
     def get_image_array(self):
         """
@@ -93,7 +105,7 @@ class SphereImageInscribed:
 
     def check_position(self, x, y):
         height, width = self.image.shape[:2]
-        if (0 > x or x > width) or (0 > y or y > height):
+        if (0 > x or x >= width) or (0 > y or y >= height):
             return False
         return True
 
@@ -102,6 +114,7 @@ class SphereImageInscribed:
 
     def get_from_coordinates(self, latitude, longitude) -> uint8[:]:
         x, y = self._get_image_position_from_coordinates(latitude, longitude)
+        # print('get_from: ', x, y)
         if self.check_position(x, y):
             return self.image[y, x, :]
         return np.zeros(3, np.core.uint8)
@@ -119,8 +132,8 @@ class SphereImageInscribed:
     def _get_image_position_from_coordinates(self, latitude, longitude):
         # assert -np.pi / 2 <= latitude <= np.pi / 2, f"latitude should be between {np.pi / 2} and -{np.pi / 2}"
         # assert np.pi <= longitude <= -np.pi, f"longitude should be between {np.pi} and -{np.pi}"
-        half_fov = self.fov / 2
-        center_distance = self.lens(half_fov - latitude) * self.dpf
+
+        center_distance = self.lens(np.pi / 2 - latitude) * self.dpf
         factors = np.exp(longitude * 1j)
         relative_position = factors * center_distance
 
@@ -132,11 +145,12 @@ class SphereImageInscribed:
     def _get_coordinates_from_image_position(self, x, y):
         height, width = self.image.shape[:2]
         # assert (0 <= x <= width) and (0 <= y <= height), "x and y must be a point inside the image"
-        half_fov = self.fov / 2
+        max_latitude = np.pi / 2
         absolute_position = complex(x, y)
         relative_position = self.absolute_to_relative(absolute_position)
-        magnitude = vector_magnitude(relative_position) - 0.5
-        latitude = half_fov - self.i_lens(magnitude / self.dpf)  # TODO Change for different angles
+        magnitude = vector_magnitude(relative_position)
+        # print('absolute_position:', absolute_position)
+        latitude = max_latitude - self.i_lens(magnitude / self.dpf)
         normalized_position = relative_position / magnitude
         longitude = np.log(normalized_position).imag
 
@@ -151,14 +165,18 @@ class SphereImageInscribed:
     def absolute_to_relative(self, absolute_position):
         return (absolute_position.real - self.center.real) + 1j * (self.center.imag - absolute_position.imag)
 
+
 @njit(parallel=True)
-def _map_from_sphere_image(first_image, sphere_image):
-    height, width = first_image.image.shape[:2]
+def _map_from_sphere_image(this_image, that_image):
+    height, width = this_image.image.shape[:2]
+    h_fov = this_image.fov / 2
 
     for x in prange(width):
         for y in prange(height):
-            lat, lon = first_image._get_coordinates_from_image_position(x, y)
+            lat, lon = this_image._get_coordinates_from_image_position(x, y)
+            if lat < (np.pi / 2 - h_fov):
+                continue
             pixel_values = np.zeros((1, 1, 3), np.core.uint8)
-            pixel_values[0, 0, :] = sphere_image.get_from_coordinates(lat, lon)
-            first_image.image[y, x, :] = pixel_values[0, 0, :]
+            pixel_values[0, 0, :] = that_image.get_from_coordinates(lat, lon)
+            this_image.image[y, x, :] = pixel_values[0, 0, :]
     return

@@ -2,6 +2,7 @@ import numpy as np
 from numba import njit, float64, cfunc
 from lightbend.utils import degrees_to_radians
 
+
 @cfunc(float64(float64))
 def rectilinear_inverse(projection_in_focal_distance_units):
     theta = np.arctan(projection_in_focal_distance_units)
@@ -17,8 +18,8 @@ def rectilinear(theta):
     As the angle presented is halved, it should not see a theta angle larger than 82.5 degrees.
     """
     assert theta > 0
-    if theta > degrees_to_radians(165):
-        raise ValueError('The rectilinear function was not made to handle angles larger than 165 degrees')
+    if theta > degrees_to_radians(89):
+        raise ValueError('The rectilinear function was not made to handle FOV larger than 179 degrees')
     return np.tan(theta)
 
 
