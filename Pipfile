@@ -9,6 +9,7 @@ numpy = ">=1.21.5"
 jupyter = "*"
 numba = "*"
 pipfile = "*"
+scipy = "*"
 
 [dev-packages]
 

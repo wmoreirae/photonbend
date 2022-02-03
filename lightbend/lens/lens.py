@@ -1,3 +1,19 @@
+#  Copyright (c) 2022. Edson Moreira
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+#  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+#  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+#  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in all copies or substantial portions
+#  of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+#  BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+#  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+#  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import numpy as np
 from numba import njit, float64, cfunc
 from lightbend.utils import degrees_to_radians
@@ -74,4 +90,21 @@ def orthographic_inverse(projection_in_focal_distance_units):
 @cfunc(float64(float64))
 def orthographic(theta):
     projection = np.sin(theta)
+    return projection
+
+
+@cfunc(float64(float64))
+def thoby_inverse(projection_in_focal_distance_units):
+    k1 = 1.47
+    k2 = 0.713
+    theta = np.arcsin(projection_in_focal_distance_units / k1) / k2
+
+    return theta
+
+
+@cfunc(float64(float64))
+def thoby(theta):
+    k1 = 1.47
+    k2 = 0.713
+    projection = k1 * np.sin(k2 * theta)
     return projection

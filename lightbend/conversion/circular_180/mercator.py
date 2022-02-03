@@ -1,3 +1,19 @@
+#  Copyright (c) 2022. Edson Moreira
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+#  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+#  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+#  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+#  The above copyright notice and this permission notice shall be included in all copies or substantial portions
+#  of the Software.
+#
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+#  BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+#  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+#  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import numpy as np
 from numba import njit, prange
 
@@ -7,6 +23,8 @@ _source_focal_distance = 1.0
 
 
 # TODO fix this function to integrate well with the rest of the library
+# TODO change this class to make use of the new SphereImage class - It will greatly simplify it
+
 @njit(parallel=True)
 def make_panoramic(source, source_function, inverse_source_function):
     source_height, source_width = source.shape[:2]
@@ -91,5 +109,3 @@ def compute_destiny_size(source_size: complex, function_source, function_destiny
     destiny_size = complex(width, height)
 
     return destiny_size
-
-
