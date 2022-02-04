@@ -15,7 +15,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
-from PIL import Image
 from numba import njit, prange
 
 from lightbend.utils import vector_magnitude, degrees_to_radians, calculate_pixels_per_f_distance, \

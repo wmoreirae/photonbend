@@ -14,37 +14,60 @@
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
+# A lot of the code in here doesn't make the use of the standards and best tools available in the python language.
+# Since we are dealing with a lot of arrays and calculations, it was thought that Numba (https://numba.pydata.org/)
+# should be used so that we can have a reasonable execution time. That goal was achieved here at the cost of some
+# python functionality.
+
+# TODO Add super-sampling (possibly adapt code from the original camera.imaging module)
+# TODO Extract rotation
+# TODO Extract image management to another class because this one is already doing too much
+
 from enum import IntEnum, auto
 
 import numpy as np
 
 from numba import uint8, float64, njit, prange, typeof, complex128, cfunc, int64, bool_
 from numba.experimental import jitclass
-from lightbend.utils import degrees_to_radians, radians_to_degrees
-from lightbend.exceptions.coordinates_out_of_image import CoordinatesOutOfImage
 
 FULL_CIRCLE = (np.pi * 2)
 
 
-# TODO Add super-sampling (possibly adapt code from the original camera.imaging module)
-# TODO Extract rotation
-# TODO Extract image management to another class because this one is already doing too much
-
-
 @njit
 def vector_magnitude(vector):
+    """Computes the magnitude of a complex number vector
+
+    :param vector: A complex number
+    :return: A floating point scalar of the vector magnitude
+    """
     return np.sqrt(vector.real ** 2 + vector.imag ** 2)
 
 
 @njit
 def decompose(a_complex_number):
+    """Decomposes a complex number into it's real and imaginary parts and returns them as integers.
+    To turn the parts into integers, it rounds them first and the proceed s to cast them.
+
+    :param a_complex_number: any complex number
+    :return: a tuple of integers representing the real and imaginary parts of the original number
+    """
     x = int(np.round(a_complex_number.real))
     y = int(np.round(a_complex_number.imag))
     return x, y
 
 
 @njit
-def _calculate_rotation_matrix(pitch, yaw, roll):
+def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
+    """Computes a rotation matrix from the three primary rotation axis
+    For more info see:  https://en.wikipedia.org/wiki/Rotation_matrix
+    or: https://mathworld.wolfram.com/RotationMatrix.html
+
+    :param pitch: represents a rotation in the x axis in radians
+    :param yaw: represents a rotation in the y axis in radians
+    :param roll: represents a rotation in the z axis in radians
+    :return: a rotation matrix
+    """
     cos_pitch = np.cos(pitch)
     sin_pitch = np.sin(pitch)
     pitch_matrix = np.array(((1, 0, 0),
@@ -68,28 +91,6 @@ def _calculate_rotation_matrix(pitch, yaw, roll):
     return rotation_matrix
 
 
-@njit(parallel=True)
-def _helper_map_from_sphere_image(this_image, that_image):
-    height, width = this_image.image.shape[:2]
-    h_fov = this_image.fov / 2
-
-    for x in prange(width):
-        for y in prange(height):
-            try:
-                lat, lon = this_image.get_coordinates_from_image_position(x, y)
-            except Exception:  # njit can only catch the basic exception and can't store so just using exception
-                continue
-
-            # if lat < (np.pi / 2 - h_fov):
-            #     continue
-            # if lat > (np.pi / 2):
-            #     continue
-            pixel_values = np.zeros((1, 1, 3), np.core.uint8)
-            pixel_values[0, 0, :] = that_image.get_from_coordinates(lat, lon)
-            this_image.image[y, x, :] = pixel_values[0, 0, :]
-    return
-
-
 class ImageType(IntEnum):
     FULL_FRAME = auto()
     CROPPED_CIRCLE = auto()
@@ -99,6 +100,11 @@ class ImageType(IntEnum):
 
 @cfunc(float64(float64))
 def _a(_b):
+    """A SIMPLE IDENTITY FUNCTION THAT IS NOT MEANT TO BE USED!
+
+    It is present only to make it easier to categorize functions marked with its decorator <@cfunc(float64(float64))>
+    so we can have those as class members on a numba jitclass
+    """
     return _b
 
 
@@ -131,7 +137,14 @@ def _get_180_longitude(longitude):
 
 
 @jitclass(spec)
-class SphereImageInscribed:
+class SphereImage:
+    """A class that maps images to a sphere
+    This class allows us to get or set pixel values that are mapped to specific coordinates of that sphere. This
+    enables us to convert images between different kinds of lenses or to create projections from it.
+
+    Not only that, this class also allows us to rotate the sphere so we can get different angles, which is essential
+    when dealing with 360 degree images or can greatly simplify creating traverse projection.
+    """
 
     def __init__(self, image_arr, image_type, fov, lens, i_lens):
         self.image = image_arr
@@ -158,7 +171,7 @@ class SphereImageInscribed:
 
         Only the self.init method should call this.
 
-        It computes the maximum distance the maximum angle this lens is set to produce if focal distances.
+        It computes the maximum distance the maximum angle this lens is set to produce in focal distances.
         To simplify the calculations, we always use a focal distance of one, and make the dots per focal distance (dpf)
         variable.
         So, in order to calculate the dpf, we measure the maximum distance the lens produce if focal distances,
@@ -172,7 +185,16 @@ class SphereImageInscribed:
         lens_max_angle_magnitude = self.lens(maximum_lens_angle)
         self.dpf = maximum_image_magnitude / lens_max_angle_magnitude
 
-    def _translate_coordinates(self, latitude, longitude, inverse=False):
+    def _translate_coordinates(self, latitude: float, longitude: float, inverse: bool = False):
+        """ Translate coordinates using the instance rotation matrix
+
+        :param latitude: The original latitude in radians as a float
+        :param longitude: The original longitude in radians as a float
+        :param inverse: Flag that sets the inverse transformation. This is used when converting coordinates generated
+                        from the underlying image quasi-polar coordinates to sphere coordinates.
+        :return: translated coordinates in radians as a 2-tuple of floats
+        """
+        # TODO refactor to make use of complex numbers
         if not self.rotated:
             return latitude, longitude
 
@@ -181,10 +203,6 @@ class SphereImageInscribed:
         x = xz.real * np.cos(latitude)
         z = xz.imag * np.cos(latitude)
 
-        # print('x: ', x)
-        # print('y: ', y)
-        # print('z: ', z)
-
         position_vector = np.zeros(3, np.core.float64)
         position_vector[:] = x, y, z
         if not inverse:
@@ -192,22 +210,25 @@ class SphereImageInscribed:
         else:
             new_position_vector = self.i_rotation_matrix.dot(position_vector)
 
-        # r_x, r_y, r_z = new_position_vector
-        # print('r_x: ', r_x)
-        # print('r_y: ', r_y)
-        # print('r_z: ', r_z)
+        translated_latitude = np.arcsin(new_position_vector[1])
+        translated_xz_magnitude = np.cos(translated_latitude)
+        translated_xz = complex(new_position_vector[0] / translated_xz_magnitude,
+                                new_position_vector[2] / translated_xz_magnitude)
+        translated_longitude = np.log(translated_xz).imag
 
-        r_latitude = np.arcsin(new_position_vector[1])
-        r_xz_mag = np.cos(r_latitude)
-        r_xz = complex(new_position_vector[0] / r_xz_mag, new_position_vector[2] / r_xz_mag)
-        r_longitude = np.log(r_xz).imag
+        return translated_latitude, translated_longitude
 
-        # print('latitude:', radians_to_degrees(r_latitude))
-        # print('longitude:', radians_to_degrees(r_longitude))
+    def set_rotation(self, pitch: float, yaw: float, roll: float) -> None:
+        """
+        Sets the instance rotation matrix to the pitch, yaw, roll values passed
 
-        return r_latitude, r_longitude
-
-    def set_rotation(self, pitch, yaw, roll):
+        If used with all values as 0 (zero), it resets the sphere to it's initial rotation.
+        It also sets the inverse rotation matrix.
+        :param pitch: The amount of rotation in radians along the x axis as a float
+        :param yaw: The amount of rotation in radians along the y axis as a float
+        :param roll: The amount of rotation in radians along the z axis as a float
+        :return: None
+        """
         if pitch == yaw == roll == 0.0:
             self.rotated = False
         else:
@@ -219,6 +240,19 @@ class SphereImageInscribed:
         self.i_rotation_matrix[:] = i_rot[:]
 
     def add_rotation(self, pitch, yaw, roll):
+        """Add a new rotation to the instance's current rotation matrix.
+        With this method a sphere can be rotated arbitrarily many times along its axis.
+        This method does not reset the rotation. It actually updates it, adding this new rotation to the previously
+        existing one.
+
+        If used with all values as 0 (zero), it doesn't do anything
+        It also updates the inverse rotation matrix.
+        :param pitch: The amount of rotation in radians along the x axis as a float
+        :param yaw: The amount of rotation in radians along the y axis as a float
+        :param roll: The amount of rotation in radians along the z axis as a float
+        :return: None
+        """
+
         self.rotated = True
         rot = _calculate_rotation_matrix(pitch, yaw, roll)
         i_rot = _calculate_rotation_matrix(-pitch, -yaw, -roll)
@@ -237,7 +271,7 @@ class SphereImageInscribed:
             raise NotImplementedError("The functionality for double inscribed images has not been finished")
 
     def get_image_array(self):
-        """
+        """ Returns a copy of the underlying image matrix
         :return: A copy of the image array
         """
         return np.copy(self.image)
@@ -247,6 +281,12 @@ class SphereImageInscribed:
         return self.image.shape
 
     def check_position(self, x, y):
+        """
+        Checks whether the passed parameters are withing the limits of the underlying image
+        :param x: absolute x position of the image you want to check
+        :param y: absolute y position of the image you want to check
+        :return: True if withing the image, False otherwise
+        """
         height, width = self.image.shape[:2]
         if (0 > x or x >= width) or (0 > y or y >= height):
             return False
@@ -258,7 +298,7 @@ class SphereImageInscribed:
         else:
             return 0, 0, 0
 
-    def get_from_coordinates(self, latitude, longitude) -> uint8[:]:
+    def get_from_coordinates(self, latitude: float, longitude: float) -> uint8[:]:
         _3_longitude = _get_360_longitude(longitude)
         x, y = self._get_image_position_from_coordinates(latitude, _3_longitude)
         # print('get_from: ', x, y)
@@ -276,13 +316,13 @@ class SphereImageInscribed:
         assert (-np.pi / 2) <= latitude <= (np.pi / 2), "latitude should be between pi/2 and -pi/2"
 
         t_latitude, t_longitude = self._translate_coordinates(latitude, longitude)
-        x, y = self._get_image_position_from_image_polar_coordinates(t_latitude, t_longitude)
+        x, y = self._get_image_position_from_image_quasipolar_coordinates(t_latitude, t_longitude)
 
         return x, y
 
-    def _get_image_position_from_image_polar_coordinates(self, t_latitude, t_longitude):
+    def _get_image_position_from_image_quasipolar_coordinates(self, t_latitude, t_longitude):
         """
-        No translation happens here. The coordinates are used as polar coordinates on the image!!!
+        No translation happens here. The coordinates are used almost as polar coordinates on the image!
 
         :param t_latitude:
         :param t_longitude:
@@ -322,3 +362,25 @@ class SphereImageInscribed:
 
     def absolute_to_relative(self, absolute_position):
         return (absolute_position.real - self.center.real) + 1j * (self.center.imag - absolute_position.imag)
+
+
+@njit(parallel=True)
+def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereImage):
+    height, width = this_image.image.shape[:2]
+    h_fov = this_image.fov / 2
+
+    for x in prange(width):
+        for y in prange(height):
+            try:
+                lat, lon = this_image.get_coordinates_from_image_position(x, y)
+            except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
+                continue
+
+            # if lat < (np.pi / 2 - h_fov):
+            #     continue
+            # if lat > (np.pi / 2):
+            #     continue
+            pixel_values = np.zeros((1, 1, 3), np.core.uint8)
+            pixel_values[0, 0, :] = that_image.get_from_coordinates(lat, lon)
+            this_image.image[y, x, :] = pixel_values[0, 0, :]
+    return
