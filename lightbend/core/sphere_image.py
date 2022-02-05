@@ -15,21 +15,23 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-# A lot of the code in here doesn't make the use of the standards and best tools available in the python language.
+# A lot of the code in here doesn't make the use of the standards and best tools available in the Python language.
 # Since we are dealing with a lot of arrays and calculations, it was thought that Numba (https://numba.pydata.org/)
-# should be used so that we can have a reasonable execution time. That goal was achieved here at the cost of some
+# should be used so that we can have a reasonable execution time. This goal has benn achieved here at the cost of some
 # python functionality.
 
 # TODO Add super-sampling (possibly adapt code from the original camera.imaging module)
 # TODO Extract rotation
-# TODO Extract image management to another class because this one is already doing too much
+# TODO Improve on the use of exceptions
 
-from enum import IntEnum, auto
 
 import numpy as np
 
-from numba import uint8, float64, njit, prange, typeof, complex128, cfunc, int64, bool_
+from numba import uint8, float64, njit, prange,  complex128, bool_, typeof
 from numba.experimental import jitclass
+from numba.experimental.jitclass.base import JitClassType
+
+from lightbend.core import LensImage
 
 FULL_CIRCLE = (np.pi * 2)
 
@@ -91,34 +93,14 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
     return rotation_matrix
 
 
-class ImageType(IntEnum):
-    FULL_FRAME = auto()
-    CROPPED_CIRCLE = auto()
-    INSCRIBED = auto()
-    DOUBLE_INSCRIBED = auto()
-
-
-@cfunc(float64(float64))
-def _a(_b):
-    """A SIMPLE IDENTITY FUNCTION THAT IS NOT MEANT TO BE USED!
-
-    It is present only to make it easier to categorize functions marked with its decorator <@cfunc(float64(float64))>
-    so we can have those as class members on a numba jitclass
-    """
-    return _b
-
-
 spec = [
-    ('center', complex128),
-    ('image_type', int64),
+    ('north_pole', complex128),
+    ('south_pole', complex128),
     ('fov', float64),
     ('dpf', float64),
-    ('image', uint8[:, :, :]),
     ('rotated', bool_),
     ('rotation_matrix', float64[:, :]),
     ('i_rotation_matrix', float64[:, :]),
-    ('lens', typeof(_a)),
-    ('i_lens', typeof(_a)),
 ]
 
 
@@ -138,6 +120,7 @@ def _get_180_longitude(longitude):
 
 @jitclass(spec)
 class SphereImage:
+    lens_image: LensImage
     """A class that maps images to a sphere
     This class allows us to get or set pixel values that are mapped to specific coordinates of that sphere. This
     enables us to convert images between different kinds of lenses or to create projections from it.
@@ -147,45 +130,13 @@ class SphereImage:
     """
 
     def __init__(self, image_arr, image_type, fov, lens, i_lens):
-        self.image = image_arr
-        self.image_type = image_type
-        self.lens = lens
-        self.i_lens = i_lens
-        self.fov = fov
+        self.lens_image = LensImage(image_arr, image_type, fov, lens, i_lens)
         self.rotated = False
         self.rotation_matrix = np.zeros((3, 3), np.core.float64)
         self.i_rotation_matrix = np.zeros((3, 3), np.core.float64)
         self.set_rotation(0.0, 0.0, 0.0)
-        self._set_center()
-        self._set_dpf()
 
-    def _set_center(self):
-        height, width = self.image.shape[:2]
-        self.center = np.complex(width, height)
-        self.center = self.center / 2
-        self.center = self.center - complex(0.5, 0.5)
-
-    def _set_dpf(self):
-        """
-        This function sets the dpf (dots per focal distance)
-
-        Only the self.init method should call this.
-
-        It computes the maximum distance the maximum angle this lens is set to produce in focal distances.
-        To simplify the calculations, we always use a focal distance of one, and make the dots per focal distance (dpf)
-        variable.
-        So, in order to calculate the dpf, we measure the maximum distance the lens produce if focal distances,
-        we calculate the longest vector of this image (from the center of the image to one of it's sides) and we
-        divide the second by the first to arrive at the dpf.  Then we set this to the current object.
-
-        :return: None
-        """
-        maximum_lens_angle = self.fov / 2
-        maximum_image_magnitude = self._get_maximum_image_magnitude()
-        lens_max_angle_magnitude = self.lens(maximum_lens_angle)
-        self.dpf = maximum_image_magnitude / lens_max_angle_magnitude
-
-    def _translate_coordinates(self, latitude: float, longitude: float, inverse: bool = False):
+    def _get_rotated_coordinates(self, latitude: float, longitude: float, inverse: bool = False):
         """ Translate coordinates using the instance rotation matrix
 
         :param latitude: The original latitude in radians as a float
@@ -259,26 +210,15 @@ class SphereImage:
         self.rotation_matrix[:] = self.rotation_matrix @ rot
         self.i_rotation_matrix[:] = self.i_rotation_matrix @ i_rot
 
-    def _get_maximum_image_magnitude(self):
-        if self.image_type == ImageType.FULL_FRAME:
-            return vector_magnitude(self.center)
-        elif self.image_type == ImageType.CROPPED_CIRCLE:
-            return self.center.real
-        elif self.image_type == ImageType.INSCRIBED:
-            return self.center.real
-        elif self.image_type == ImageType.DOUBLE_INSCRIBED:
-            # TODO
-            raise NotImplementedError("The functionality for double inscribed images has not been finished")
-
     def get_image_array(self):
         """ Returns a copy of the underlying image matrix
         :return: A copy of the image array
         """
-        return np.copy(self.image)
+        return np.copy(self.lens_image.image)
 
     @property
     def shape(self):
-        return self.image.shape
+        return self.lens_image.shape
 
     def check_position(self, x, y):
         """
@@ -287,92 +227,58 @@ class SphereImage:
         :param y: absolute y position of the image you want to check
         :return: True if withing the image, False otherwise
         """
-        height, width = self.image.shape[:2]
+        height, width = self.lens_image.shape[:2]
         if (0 > x or x >= width) or (0 > y or y >= height):
             return False
         return True
 
     def get_flat_position(self, x, y):
         if self.check_position(x, y):
-            return self.image[y, x, :]
+            return self.lens_image.image[y, x, :]
         else:
             return 0, 0, 0
 
     def get_from_coordinates(self, latitude: float, longitude: float) -> uint8[:]:
-        _3_longitude = _get_360_longitude(longitude)
-        x, y = self._get_image_position_from_coordinates(latitude, _3_longitude)
-        # print('get_from: ', x, y)
+        _360_longitude = _get_360_longitude(longitude)
+        x, y = self._get_cartesian_from_coordinates(latitude, _360_longitude)
+
         if self.check_position(x, y):
-            return self.image[y, x, :]
+            return self.lens_image.image[y, x, :]
         return np.zeros(3, np.core.uint8)
 
     def set_to_coordinates(self, latitude, longitude, data):
-        _3_longitude = _get_360_longitude(longitude)
-        x, y = self._get_image_position_from_coordinates(latitude, _3_longitude)
+        _360_longitude = _get_360_longitude(longitude)
+        x, y = self._get_cartesian_from_coordinates(latitude, _360_longitude)
         if self.check_position(x, y):
-            self.image[y, x, :] = data
+            self.lens_image.image[y, x, :] = data
 
-    def _get_image_position_from_coordinates(self, latitude, longitude):
+    def _get_cartesian_from_coordinates(self, latitude, longitude):
         assert (-np.pi / 2) <= latitude <= (np.pi / 2), "latitude should be between pi/2 and -pi/2"
 
-        t_latitude, t_longitude = self._translate_coordinates(latitude, longitude)
-        x, y = self._get_image_position_from_image_quasipolar_coordinates(t_latitude, t_longitude)
+        r_latitude, r_longitude = self._get_rotated_coordinates(latitude, longitude, True)
+        x, y = self.lens_image.translate_to_cartesian(r_latitude, r_longitude)
 
         return x, y
 
-    def _get_image_position_from_image_quasipolar_coordinates(self, t_latitude, t_longitude):
-        """
-        No translation happens here. The coordinates are used almost as polar coordinates on the image!
+    def get_coordinates_from_cartesian(self, x, y):
+        latitude, longitude = self.lens_image.translate_to_polar(x, y)
+        r_latitude, r_longitude = self._get_rotated_coordinates(latitude, longitude)
 
-        :param t_latitude:
-        :param t_longitude:
-        :return:
-        """
-        center_distance = self.lens(np.pi / 2 - t_latitude) * self.dpf
-        factors = np.exp(t_longitude * 1j)
-        relative_position = factors * center_distance
-        position = self.relative_to_absolute(relative_position)
-        x, y = decompose(position)
-        return x, y
-
-    def get_coordinates_from_image_position(self, x, y):
-        # TODO fix this function so it can handle many kinds of images
-        max_latitude = np.pi / 2
-        h_fov = self.fov / 2
-        min_latitude = max_latitude - h_fov
-
-        absolute_position = complex(x, y)
-        relative_position = self.absolute_to_relative(absolute_position)
-        magnitude = vector_magnitude(relative_position)
-        if magnitude > self._get_maximum_image_magnitude():
-            raise Exception('not a valid position')
-
-        latitude = max_latitude - self.i_lens(magnitude / self.dpf)
-        normalized_position = relative_position / magnitude
-        longitude = np.log(normalized_position).imag
-
-        longitude = _get_180_longitude(longitude)
-        return self._translate_coordinates(latitude, longitude, True)
+        _180_longitude = _get_180_longitude(r_longitude)
+        return self._get_rotated_coordinates(r_latitude, _180_longitude, True)
 
     def map_from_sphere_image(self, sphere_image):
         _helper_map_from_sphere_image(self, sphere_image)
 
-    def relative_to_absolute(self, relative_position):
-        return (relative_position.real + self.center.real) + 1j * (self.center.imag - relative_position.imag)
-
-    def absolute_to_relative(self, absolute_position):
-        return (absolute_position.real - self.center.real) + 1j * (self.center.imag - absolute_position.imag)
-
 
 @njit(parallel=True)
 def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereImage):
-    height, width = this_image.image.shape[:2]
-    h_fov = this_image.fov / 2
+    height, width = this_image.lens_image.shape[:2]
 
     for x in prange(width):
         for y in prange(height):
             try:
-                lat, lon = this_image.get_coordinates_from_image_position(x, y)
+                lat, lon = this_image.get_coordinates_from_cartesian(x, y)
             except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
                 continue
 
@@ -382,5 +288,5 @@ def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereIma
             #     continue
             pixel_values = np.zeros((1, 1, 3), np.core.uint8)
             pixel_values[0, 0, :] = that_image.get_from_coordinates(lat, lon)
-            this_image.image[y, x, :] = pixel_values[0, 0, :]
+            this_image.lens_image.image[y, x, :] = pixel_values[0, 0, :]
     return
