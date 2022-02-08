@@ -21,9 +21,8 @@
 # python functionality.
 
 # TODO Add super-sampling (possibly adapt code from the original camera.imaging module)
-# TODO Extract rotation
 # TODO Improve on the use of exceptions
-
+from typing import Tuple
 
 import numpy as np
 
@@ -104,18 +103,7 @@ spec = [
 ]
 
 
-@njit
-def _get_360_longitude(longitude):
-    new_longitude = longitude % FULL_CIRCLE
-    return new_longitude
 
-
-@njit
-def _get_180_longitude(longitude):
-    new_longitude = longitude % FULL_CIRCLE
-    if np.pi < new_longitude:
-        new_longitude -= (2 * np.pi)
-    return new_longitude
 
 
 @jitclass(spec)
@@ -130,6 +118,14 @@ class SphereImage:
     """
 
     def __init__(self, image_arr, image_type, fov, lens, i_lens):
+        """Create a new SphereImage
+
+        :param image_arr: The array representing the image.
+        :param image_type: An enum of lightbend.core.ImageType
+        :param fov: The maximum Field of View of this image
+        :param lens: The lens function of this sphere image
+        :param i_lens: The inverse lens function of this image
+        """
         self.lens_image = LensImage(image_arr, image_type, fov, lens, i_lens)
         self.rotated = False
         self.rotation_matrix = np.zeros((3, 3), np.core.float64)
@@ -191,10 +187,12 @@ class SphereImage:
         self.i_rotation_matrix[:] = i_rot[:]
 
     def add_rotation(self, pitch, yaw, roll):
+        # TODO change method to chain rotations instead of simply adding them together.
         """Add a new rotation to the instance's current rotation matrix.
         With this method a sphere can be rotated arbitrarily many times along its axis.
         This method does not reset the rotation. It actually updates it, adding this new rotation to the previously
         existing one.
+        The problem is it won't add consecutively.
 
         If used with all values as 0 (zero), it doesn't do anything
         It also updates the inverse rotation matrix.
@@ -232,27 +230,53 @@ class SphereImage:
             return False
         return True
 
-    def get_flat_position(self, x, y):
+    def get_value_from_cartesian(self, x, y):
+        """ Get the value represented on the cartesian position x, y of this image
+
+        :param x: The horizontal position of the desired value
+        :param y: The vertical position of the desired value
+        :return: a triplet of values of type uint8
+        """
         if self.check_position(x, y):
             return self.lens_image.image[y, x, :]
         else:
             return 0, 0, 0
 
-    def get_from_coordinates(self, latitude: float, longitude: float) -> uint8[:]:
-        _360_longitude = _get_360_longitude(longitude)
-        x, y = self._get_cartesian_from_coordinates(latitude, _360_longitude)
+    def get_value_from_spherical(self, latitude: float, longitude: float) -> uint8[:]:
+        """Returns the value at the given latitude and longitude.
+
+        If the request point is invalid, it returns the triplet (0, 0 ,0)
+        :param latitude: The latitude of the requested value
+        :param longitude: The longitude of the requested value
+        :return: a triplet of values of type uint8
+        """
+
+        x, y = self.translate_spherical_to_cartesian(latitude, longitude)
 
         if self.check_position(x, y):
             return self.lens_image.image[y, x, :]
         return np.zeros(3, np.core.uint8)
 
-    def set_to_coordinates(self, latitude, longitude, data):
-        _360_longitude = _get_360_longitude(longitude)
-        x, y = self._get_cartesian_from_coordinates(latitude, _360_longitude)
+    def set_value_to_spherical(self, latitude: float, longitude: float, data: uint8[:]) -> None:
+        """Sets the value at the given latitude and longitude to the value present on data
+
+        :param latitude: The latitude of the value to set
+        :param longitude: The longitude of the value to set
+        :param data: The value that should be set
+        :return: None
+        """
+
+        x, y = self.translate_spherical_to_cartesian(latitude, longitude)
         if self.check_position(x, y):
             self.lens_image.image[y, x, :] = data
 
-    def _get_cartesian_from_coordinates(self, latitude, longitude):
+    def translate_spherical_to_cartesian(self, latitude:float, longitude: float) -> Tuple[int, int]:
+        """Translate spherical coordinates to cartesian coordinates of the image
+
+        :param latitude: The latitude of the location to be translated
+        :param longitude: The longitude of the location to be translated
+        :return: The cartesian coordinates of the image represented by the spherical coordinates passed
+        """
         assert (-np.pi / 2) <= latitude <= (np.pi / 2), "latitude should be between pi/2 and -pi/2"
 
         r_latitude, r_longitude = self._get_rotated_coordinates(latitude, longitude, True)
@@ -260,33 +284,77 @@ class SphereImage:
 
         return x, y
 
-    def get_coordinates_from_cartesian(self, x, y):
+    def translate_cartesian_to_spherical(self, x, y):
+        """Translate cartesian coordinates to spherical coordinates of the image
+
+        :param x: The horizontal coordinate
+        :param y: The vertical coordinate
+        :return: The spherical coordinates representing that location
+        """
         latitude, longitude = self.lens_image.translate_to_polar(x, y)
         r_latitude, r_longitude = self._get_rotated_coordinates(latitude, longitude)
 
-        _180_longitude = _get_180_longitude(r_longitude)
-        return self._get_rotated_coordinates(r_latitude, _180_longitude, True)
+        return r_latitude, r_longitude
 
-    def map_from_sphere_image(self, sphere_image):
-        _helper_map_from_sphere_image(self, sphere_image)
+    def map_from_sphere_image(self, target_image, super_sampler: int) -> None:
+        """ Maps one spherical image to another, enabling conversion between different lenses, FoVs and target.
+
+        The current sphere image will receive the data from the target sphere image. However it won't just copy it.
+        The information will be translated to this sphere using their angular data and other specs, like its lens and
+        FoV, producing a new image.
+
+        :param target_image: The sphere image that will serve as the source of the information.
+        :param super_sampler: The super sampling factor, which enables improving the image at the cost of processing.
+            WARNING: The super sampling factor is actually the square of this parameter.
+            e.g.: When using a factor of 3, it will actually compute 9 times more. For 4 it is 16 and 5 makes it 25.
+            The super sampler is implemented in a way that uses little memory space, so it doesn't hinder it's use
+            on low-spec machines. It won't increase much the memory footprint.
+        :return: None
+        """
+        _helper_map_from_sphere_image(self, target_image, super_sampler)
 
 
 @njit(parallel=True)
-def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereImage):
+def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereImage, super_sampler: int):
     height, width = this_image.lens_image.shape[:2]
 
-    for x in prange(width):
-        for y in prange(height):
-            try:
-                lat, lon = this_image.get_coordinates_from_cartesian(x, y)
-            except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
-                continue
+    # SUPER SAMPLING DATA
+    ss_pixel_center = complex((super_sampler - 1) / 2, (super_sampler - 1) / 2)
+    ss_subpixel_distance = 1 / super_sampler
 
-            # if lat < (np.pi / 2 - h_fov):
-            #     continue
-            # if lat > (np.pi / 2):
-            #     continue
-            pixel_values = np.zeros((1, 1, 3), np.core.uint8)
-            pixel_values[0, 0, :] = that_image.get_from_coordinates(lat, lon)
-            this_image.lens_image.image[y, x, :] = pixel_values[0, 0, :]
+    for column in prange(width):
+        for row in prange(height):
+            if super_sampler == 1:
+                # No super sampling case
+                try:
+                    lat, lon = this_image.translate_cartesian_to_spherical(column, row)
+                except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
+                    continue
+                this_image.lens_image.image[row, column, :] = that_image.get_value_from_spherical(lat, lon)
+
+            else:
+                # super sampling
+                super_sample_matrix = np.zeros((super_sampler, super_sampler, 3), np.core.uint8)
+                for ss_row in prange(super_sampler):
+                    for ss_column in prange(super_sampler):
+                        ss_position = (complex(ss_column, ss_row) - ss_pixel_center) * ss_subpixel_distance
+
+                        position_destiny = complex(column, row) + ss_position
+                        a_column = position_destiny.real
+                        a_row = position_destiny.imag
+                        try:
+                            lat, lon = this_image.translate_cartesian_to_spherical(a_column, a_row)
+                        except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
+                            continue
+
+                        super_sample_matrix[ss_row, ss_column, :] = that_image.get_value_from_spherical(lat, lon)
+
+                # Calculate the pixel mean and assign it!
+                ss_mean_1st = np.mean(super_sample_matrix[:, :, 0])
+                ss_mean_2nd = np.mean(super_sample_matrix[:, :, 1])
+                ss_mean_3rd = np.mean(super_sample_matrix[:, :, 2])
+                this_image.lens_image.image[row, column, 0] = int(np.round(ss_mean_1st))
+                this_image.lens_image.image[row, column, 1] = int(np.round(ss_mean_2nd))
+                this_image.lens_image.image[row, column, 2] = int(np.round(ss_mean_3rd))
+
     return

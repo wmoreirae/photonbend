@@ -15,8 +15,6 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-# TODO Add super-sampling (possibly adapt code from the original camera.imaging module)
-# TODO Extract rotation
 # TODO Improve on the use of exceptions
 from enum import IntEnum, auto, Enum
 from typing import Tuple
@@ -133,12 +131,12 @@ class LensImage:
         if self.image_type == ImageType.FULL_FRAME:
             return vector_magnitude(self.north_pole)
         elif self.image_type == ImageType.CROPPED_CIRCLE:
-            return self.north_pole.real
+            return self.north_pole.imag
         elif self.image_type == ImageType.INSCRIBED:
-            return self.north_pole.real
+            return self.north_pole.imag
         elif self.image_type == ImageType.DOUBLE_INSCRIBED:
-            return self.north_pole.real
-        return self.north_pole.real
+            return self.north_pole.imag
+        return self.north_pole.imag
 
     @property
     def shape(self):

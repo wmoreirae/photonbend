@@ -96,3 +96,18 @@ def calculate_pixels_per_f_distance(vector, angle, f_distance, mapping_function)
     v_magnitude = vector_magnitude(vector)
     pixels_pfd = v_magnitude / quasi_magnitude
     return pixels_pfd
+
+# TODO MAKE A TRANSLATE TO GEODESIC
+
+@njit
+def _Z_get_360_longitude(longitude):
+    new_longitude = longitude % FULL_CIRCLE
+    return new_longitude
+
+
+@njit
+def _Z_get_180_longitude(longitude):
+    new_longitude = longitude % FULL_CIRCLE
+    if np.pi < new_longitude:
+        new_longitude -= (2 * np.pi)
+    return new_longitude
