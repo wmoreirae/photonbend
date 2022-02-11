@@ -21,7 +21,7 @@ from typing import Tuple
 
 import numpy as np
 
-from numba import uint8, float64, njit, typeof, complex128, cfunc, int64
+from numba import uint8, float64, njit, typeof, complex128, cfunc, int64, bool_
 from numba.experimental import jitclass
 
 from lightbend.utils import vector_magnitude
@@ -43,11 +43,11 @@ def decompose(a_complex_number):
     return x, y
 
 
-@cfunc(float64(float64))
-def _a(_b):
+@cfunc(float64(float64, bool_))
+def _a(_b, _c):
     """A SIMPLE IDENTITY FUNCTION THAT IS NOT MEANT TO BE USED!
 
-    It is present only to make it easier to categorize functions marked with its decorator <@cfunc(float64(float64))>
+    It is present only to make it easier to categorize functions marked with its decorator <@cfunc(float64(float64, bool_))>
     so we can have those as class members on a numba jitclass
     """
     return _b
@@ -61,7 +61,6 @@ spec = [
     ('image', uint8[:, :, :]),
     ('image_type', int64),
     ('lens', typeof(_a)),
-    ('i_lens', typeof(_a)),
 ]
 
 
@@ -75,13 +74,10 @@ class LensImage:
     when dealing with 360 degree images or can greatly simplify creating traverse projection.
     """
 
-
-    def __init__(self, image_arr, i_type, fov, lens, i_lens):
+    def __init__(self, image_arr, i_type, fov, lens):
         self.image = image_arr
         self.image_type = i_type
-        print(self.image_type)
         self.lens = lens
-        self.i_lens = i_lens
         self.fov = fov
         self._set_poles()
         self._set_dpf()
@@ -123,7 +119,7 @@ class LensImage:
             maximum_lens_angle = self.fov / 2
 
         maximum_image_magnitude = self.maximum_magnitude
-        lens_max_angle_magnitude = self.lens(maximum_lens_angle)
+        lens_max_angle_magnitude = self.lens(maximum_lens_angle, False)
         self.dpf = maximum_image_magnitude / lens_max_angle_magnitude
 
     @property
@@ -182,13 +178,13 @@ class LensImage:
         :return:
         """
         if self.image_type == ImageType.DOUBLE_INSCRIBED and latitude < 0:
-            polar_distance = self.lens(np.pi / 2 + latitude) * self.dpf
+            polar_distance = self.lens(np.pi / 2 + latitude, False) * self.dpf
             factors = np.exp(longitude * 1j)
             factors = complex(-factors.real, factors.imag)  # double X inscribed inversion
             relative_position = factors * polar_distance
             position = self.relative_to_absolute(relative_position, self.south_pole)
         else:
-            polar_distance = self.lens(np.pi / 2 - latitude) * self.dpf
+            polar_distance = self.lens(np.pi / 2 - latitude, False) * self.dpf
             factors = np.exp(longitude * 1j)
             relative_position = factors * polar_distance
             position = self.relative_to_absolute(relative_position, self.north_pole)
@@ -207,9 +203,9 @@ class LensImage:
             raise Exception('not a valid position')
 
         if reference_point == self.north_pole:
-            latitude = max_latitude - self.i_lens(magnitude / self.dpf)
+            latitude = max_latitude - self.lens(magnitude / self.dpf, True)
         else:  # reference_point == self.south_pole
-            latitude = min_latitude + self.i_lens(magnitude / self.dpf)
+            latitude = min_latitude + self.lens(magnitude / self.dpf, True)
 
         if self.image_type == ImageType.DOUBLE_INSCRIBED and latitude < 0:
             relative_position = complex(-relative_position.real, relative_position.imag)  # double inscribed inversion

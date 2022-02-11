@@ -103,9 +103,6 @@ spec = [
 ]
 
 
-
-
-
 @jitclass(spec)
 class SphereImage:
     lens_image: LensImage
@@ -117,16 +114,15 @@ class SphereImage:
     when dealing with 360 degree images or can greatly simplify creating traverse projection.
     """
 
-    def __init__(self, image_arr, image_type, fov, lens, i_lens):
+    def __init__(self, image_arr, image_type, fov, lens):
         """Create a new SphereImage
 
         :param image_arr: The array representing the image.
-        :param image_type: An enum of lightbend.core.ImageType
+        :param image_type: An enum of <lightbend.core.ImageType>
         :param fov: The maximum Field of View of this image
         :param lens: The lens function of this sphere image
-        :param i_lens: The inverse lens function of this image
         """
-        self.lens_image = LensImage(image_arr, image_type, fov, lens, i_lens)
+        self.lens_image = LensImage(image_arr, image_type, fov, lens)
         self.rotated = False
         self.rotation_matrix = np.zeros((3, 3), np.core.float64)
         self.i_rotation_matrix = np.zeros((3, 3), np.core.float64)
