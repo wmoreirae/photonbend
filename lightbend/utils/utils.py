@@ -37,7 +37,7 @@ def degrees_to_radians(degrees):
 
 @njit
 def radians_to_degrees(rad):
-    return rad / np.pi * 180
+    return rad / np.pi * 180.0
 
 
 @njit

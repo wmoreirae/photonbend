@@ -21,6 +21,53 @@ from lightbend.core import LensImage, SphereImage, ImageType
 from lightbend.utils import degrees_to_radians, radians_to_degrees
 
 
+@njit
+def _mercator_projection_function(radius, longitude_or_x: float, latitude_or_y: float, cardinal: bool):
+    """ Gives the mercator projection function or it's inverse
+
+    :param radius: The globe radius to project
+    :param longitude_or_x:
+    :param latitude_or_y:
+    :param cardinal:
+    :return:
+    """
+    x_or_long = _mercator_x_longitude(radius, longitude_or_x, cardinal)
+    y_or_lat = _mercator_y_latitude(radius, latitude_or_y, cardinal)
+    if not cardinal:
+        x = x_or_long
+        y = y_or_lat
+        return x, y
+
+    latitude = y_or_lat
+    longitude = x_or_long
+    return latitude, longitude
+
+
+@njit
+def _mercator_x_longitude(radius, longitude_or_x: float, cardinal: bool):
+    if not cardinal:
+        x = (radius * longitude_or_x)
+        return x
+    else:
+        longitude = longitude_or_x / radius
+        return longitude
+
+
+@njit
+def _mercator_y_latitude(radius, latitude_or_y: float, cardinal: bool):
+    destiny_height = int(np.round(radius * np.log(np.tan(np.pi / 4 + degrees_to_radians(89 / 2))))) * 2
+    destiny_center_height = destiny_height / 2 - 0.5
+    if not cardinal:
+        y =  destiny_center_height - (radius * np.log(np.tan(latitude_or_y/2 + np.pi/4)))
+        if np.isnan(y):
+            raise Exception("Error: Mercator can't translate angles above 89 degrees")
+        return y
+    else:
+        latitude = 2 * np.arctan(np.exp((destiny_center_height - latitude_or_y) / radius)) - np.pi / 2
+
+        return latitude
+
+
 @njit(parallel=True)
 def make_panoramic(source: SphereImage, desired_width):
     radius = desired_width / (np.pi * 2)
@@ -29,34 +76,19 @@ def make_panoramic(source: SphereImage, desired_width):
     destiny_height = int(np.round(radius * np.log(np.tan(np.pi / 4 + degrees_to_radians(89 / 2))))) * 2
     destiny_array = np.zeros((destiny_height, destiny_width, 3), np.core.uint8)
 
-    angle_of_a_column = (np.pi * 2) / destiny_width
-    destiny_center_row = (destiny_height / 2) - 0.5
     for row in prange(destiny_height):
-
-        row_delta = destiny_center_row - row
-        source_yl_theta = _get_latitude(row_delta, radius)
-        latitude = source_yl_theta
-
+        latitude = _mercator_y_latitude(radius, row, True)
         for column in prange(destiny_width):
-            longitude = (angle_of_a_column * column)
+            longitude = _mercator_x_longitude(radius, column, True)
             destiny_array[row, column, :] = source.get_value_from_spherical(latitude, longitude)
 
     return destiny_array
 
 
-@njit
-def _get_latitude(delta_y, radius):
-    return 2 * np.arctan(np.exp(delta_y / radius)) - np.pi / 2
-
-
 @njit(parallel=False)
 def make_sphere_image(source: np.array, lens):
-    # This implementation is a dirty dirty hack and should be modified to use the inverse of the mercator instead of
-    # what it does here.
-    max_magnitude = lens(np.pi / 2)
     source_height, source_width = source.shape[:2]
     radius = source_width / (2 * np.pi)
-    source_center_row = source_height / 2 - 0.5
 
     destiny_height = int(np.round(source_width / np.pi))
     destiny_width = 2 * destiny_height
@@ -65,25 +97,23 @@ def make_sphere_image(source: np.array, lens):
     d_sphere = SphereImage(np.zeros((destiny_height, destiny_width, 3), np.core.uint8), ImageType.DOUBLE_INSCRIBED,
                            np.pi * 2, lens)
 
-    for column in range(source_width):
-        for row in range(source_height):
-            row_delta = source_center_row - row
-            latitude = _get_latitude(row_delta, radius)
-            longitude = (angle_of_a_column * column)
-            value = source[row, column, :]
-            d_sphere.set_value_to_spherical(latitude, longitude, value)
-
-            if np.abs(latitude) < np.pi / 6:
-                # This is a dirty hack to eliminate some dark spots that show because sometimes the projection
-                # doesn't have detail enough to fill all the pixels on the sphere
-                latitude2 = _get_latitude(row_delta - 0.5, radius)
-                d_sphere.set_value_to_spherical(latitude2, longitude, value)
-            # print('latitude: ', latitude)
-            # print('longitude: ', longitude)
+    for row in range(destiny_height):
+        for column in range(destiny_width):
+            try:
+                latitude, longitude = d_sphere.translate_cartesian_to_spherical(column, row)
+                x, y = _mercator_projection_function(radius, longitude, latitude, False)
+                x = int(np.round(x))
+                y = int(np.round(y))
+                if y < 0 or y > source_height:
+                    continue
+                value = source[y, x, :]
+                d_sphere.set_value_to_spherical(latitude, longitude, value)
+            except Exception:
+                continue
     return d_sphere
 
 
 def compute_best_width(source: SphereImage) -> int:
-    factor = source.lens_image.lens(np.pi / 2)
+    factor = source.lens_image.lens(np.pi / 2, False)
     dpf = source.lens_image.dpf
     return int(np.round(factor * dpf * 2 * np.pi))
