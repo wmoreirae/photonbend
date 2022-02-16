@@ -160,13 +160,13 @@ class LensImage:
 
         return True
 
-    def get_from_coordinates(self, latitude: float, longitude: float) -> uint8[:]:
+    def get_from_spherical(self, latitude: float, longitude: float) -> uint8[:]:
         x, y = self.translate_to_cartesian(latitude, longitude)
         if self.is_position(x, y):
             return self.image[y, x, :]
         return np.zeros(3, np.core.uint8)
 
-    def set_to_coordinates(self, latitude, longitude, data):
+    def set_to_spherical(self, latitude, longitude, data):
         x, y = self.translate_to_cartesian(latitude, longitude)
         if self.is_position(x, y):
             self.image[y, x, :] = data
@@ -191,7 +191,7 @@ class LensImage:
         x, y = decompose(position)
         return x, y
 
-    def translate_to_polar(self, x, y):
+    def translate_to_spherical(self, x, y):
         max_latitude = np.pi / 2
         min_latitude = max_latitude - self.fov / 2
 

@@ -287,7 +287,7 @@ class SphereImage:
         :param y: The vertical coordinate
         :return: The spherical coordinates representing that location
         """
-        latitude, longitude = self.lens_image.translate_to_polar(x, y)
+        latitude, longitude = self.lens_image.translate_to_spherical(x, y)
         r_latitude, r_longitude = self._get_rotated_coordinates(latitude, longitude)
 
         return r_latitude, r_longitude
@@ -315,7 +315,7 @@ def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereIma
     height, width = this_image.lens_image.shape[:2]
 
     # SUPER SAMPLING DATA
-    ss_pixel_center = complex((super_sampler - 1) / 2, (super_sampler - 1) / 2)
+    ss_matrix_center_pixel = complex((super_sampler - 1) / 2, (super_sampler - 1) / 2)
     ss_subpixel_distance = 1 / super_sampler
 
     for column in prange(width):
@@ -333,7 +333,7 @@ def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereIma
                 super_sample_matrix = np.zeros((super_sampler, super_sampler, 3), np.core.uint8)
                 for ss_row in prange(super_sampler):
                     for ss_column in prange(super_sampler):
-                        ss_position = (complex(ss_column, ss_row) - ss_pixel_center) * ss_subpixel_distance
+                        ss_position = (complex(ss_column, ss_row) - ss_matrix_center_pixel) * ss_subpixel_distance
 
                         position_destiny = complex(column, row) + ss_position
                         a_column = position_destiny.real

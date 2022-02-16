@@ -13,47 +13,59 @@
 #  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+from typing import Tuple, Callable
 
 import numpy as np
 from numba import njit
 
+@njit
+def decompose(a_complex_number):
+    """Decomposes a complex number into it's real and imaginary parts and returns them as integers.
+    To turn the parts into integers, it rounds them first and the proceed s to cast them.
+
+    :param a_complex_number: any complex number
+    :return: a tuple of integers representing the real and imaginary parts of the original number
+    """
+    x = int(np.round(a_complex_number.real))
+    y = int(np.round(a_complex_number.imag))
+    return x, y
 
 @njit
-def angle_from_vector(vector):
+def angle_from_vector(vector: complex):
     u_vector = unit_vector(vector)
     theta = np.log(vector).imag
     return theta
 
 
 @njit
-def vector_magnitude(vector):
+def vector_magnitude(vector: complex):
     return np.sqrt(vector.real ** 2 + vector.imag ** 2)
 
 
 @njit
-def degrees_to_radians(degrees):
+def degrees_to_radians(degrees: float):
     return degrees / 180 * np.pi
 
 
 @njit
-def radians_to_degrees(rad):
+def radians_to_degrees(rad: float) -> float:
     return rad / np.pi * 180.0
 
 
 @njit
-def dpi_to_dpmm(dpi: int):
+def dpi_to_dpmm(dpi: int) -> float:
     mm_in_a_inch = 25.4
     return dpi / mm_in_a_inch
 
 
 @njit
-def vector_from_coordinates(x, y):
+def vector_from_coordinates(x, y) -> complex:
     vector = complex(x, y)
     return vector
 
 
 @njit
-def unit_vector(vector):
+def unit_vector(vector: complex) -> complex:
     magnitude = vector_magnitude(vector)
     if 0 == magnitude:
         return complex(0, 0)
@@ -62,12 +74,12 @@ def unit_vector(vector):
 
 
 @njit
-def c_round(complex_number):
+def c_round(complex_number) -> Tuple[int, int]:
     return int(np.round(complex_number.real)), int(np.round(complex_number.imag))
 
 
 @njit
-def vector_to_focal_units(vector, focal_distance, pixels_per_f_distance):
+def vector_to_focal_units(vector: complex, focal_distance: float, pixels_per_f_distance: float) -> float:
     """Calculates the projection of a pixel.
 
     With the projection of a pixel, you can use an inverse_mapping_function to get the lens angle of it
@@ -83,19 +95,22 @@ def vector_to_focal_units(vector, focal_distance, pixels_per_f_distance):
 
 
 @njit
-def calculate_lens_angle(vector, f_distance, dpi, inverse_mapping_function):
+def calculate_lens_angle(vector: complex, f_distance: float, dpi: float,
+                         mapping_function: Callable[[float, bool], float]):
     normalized_magnitude = vector_to_focal_units(vector, f_distance, dpi)
-    angle = inverse_mapping_function(normalized_magnitude)
+    angle = mapping_function(normalized_magnitude, True)
     return angle * 2
 
 
 @njit
-def calculate_pixels_per_f_distance(vector, angle, f_distance, mapping_function):
+def calculate_pixels_per_f_distance(vector: complex, angle: float, f_distance: float,
+                                    mapping_function: Callable[[float, bool], float]):
     half_angle = angle / 2
-    quasi_magnitude = mapping_function(half_angle) * f_distance
+    quasi_magnitude = mapping_function(half_angle, False) * f_distance
     v_magnitude = vector_magnitude(vector)
     pixels_pfd = v_magnitude / quasi_magnitude
     return pixels_pfd
+
 
 # TODO MAKE A TRANSLATE TO GEODESIC
 
