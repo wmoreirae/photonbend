@@ -102,10 +102,9 @@ def make_sphere_image(source: np.array, lens):
 
     destiny_height = int(np.round(2 * radius))
     destiny_width = 2 * destiny_height
-    sphere_array = np.zeros((destiny_height, destiny_width, 3), np.core.uint8)
 
-    d_sphere = SphereImage(sphere_array, LensImageType.DOUBLE_INSCRIBED,
-                           degrees_to_radians(190), lens)
+    d_sphere = SphereImage(np.zeros((destiny_height, destiny_width, 3), np.core.uint8), LensImageType.DOUBLE_INSCRIBED,
+                           degrees_to_radians(195), lens)
 
     for row in range(destiny_height):
         for column in range(destiny_width):
@@ -117,7 +116,7 @@ def make_sphere_image(source: np.array, lens):
                 if y < 0 or y > source_height:
                     continue
                 value = source[y, x, :]
-                sphere_array[row, column, :] = value
+                d_sphere.lens_image.image[row, column, :] = value[:]
             except Exception:
                 continue
     return d_sphere
