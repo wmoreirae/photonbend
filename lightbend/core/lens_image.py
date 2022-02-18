@@ -25,7 +25,7 @@ from numba import uint8, float64, njit, typeof, complex128, cfunc, int64, bool_
 from numba.experimental import jitclass
 
 from lightbend.utils import vector_magnitude
-from lightbend.core.image_type import ImageType
+from lightbend.core.image_type import LensImageType
 
 FULL_CIRCLE = (np.pi * 2)
 
@@ -85,7 +85,7 @@ class LensImage:
     def _set_poles(self):
         height, width = self.image.shape[:2]
 
-        if self.image_type == ImageType.DOUBLE_INSCRIBED:  # double image
+        if self.image_type == LensImageType.DOUBLE_INSCRIBED:  # double image
             if width > height:  # horizontal
                 real_width = width / 2
                 self.north_pole = np.complex(real_width, height) / 2
@@ -113,10 +113,7 @@ class LensImage:
 
         :return: None
         """
-        if self.image_type == ImageType.DOUBLE_INSCRIBED:
-            maximum_lens_angle = self.fov / 4
-        else:
-            maximum_lens_angle = self.fov / 2
+        maximum_lens_angle = self.fov / 2
 
         maximum_image_magnitude = self.maximum_magnitude
         lens_max_angle_magnitude = self.lens(maximum_lens_angle, False)
@@ -124,15 +121,17 @@ class LensImage:
 
     @property
     def maximum_magnitude(self):
-        if self.image_type == ImageType.FULL_FRAME:
-            return vector_magnitude(self.north_pole)
-        elif self.image_type == ImageType.CROPPED_CIRCLE:
-            return self.north_pole.imag
-        elif self.image_type == ImageType.INSCRIBED:
-            return self.north_pole.imag
-        elif self.image_type == ImageType.DOUBLE_INSCRIBED:
-            return self.north_pole.imag
-        return self.north_pole.imag
+        half = 0.5
+        half_c = complex(half, half)
+        if self.image_type == LensImageType.FULL_FRAME:
+            return vector_magnitude(self.north_pole + half_c)
+        elif self.image_type == LensImageType.CROPPED_CIRCLE:
+            return self.north_pole.imag + half
+        elif self.image_type == LensImageType.INSCRIBED:
+            return self.north_pole.imag + half
+        elif self.image_type == LensImageType.DOUBLE_INSCRIBED:
+            return self.north_pole.imag + half
+        return self.north_pole.imag + half
 
     @property
     def shape(self):
@@ -177,7 +176,7 @@ class LensImage:
         :param longitude:
         :return:
         """
-        if self.image_type == ImageType.DOUBLE_INSCRIBED and latitude < 0:
+        if self.image_type == LensImageType.DOUBLE_INSCRIBED and latitude < 0:
             polar_distance = self.lens(np.pi / 2 + latitude, False) * self.dpf
             factors = np.exp(longitude * 1j)
             factors = complex(-factors.real, factors.imag)  # double X inscribed inversion
@@ -194,6 +193,8 @@ class LensImage:
     def translate_to_spherical(self, x, y):
         max_latitude = np.pi / 2
         min_latitude = max_latitude - self.fov / 2
+        if self.image_type == LensImageType.DOUBLE_INSCRIBED:
+            min_latitude = -max_latitude
 
         absolute_position = complex(x, y)
         relative_position, reference_point = self.absolute_to_relative(absolute_position)
@@ -207,7 +208,7 @@ class LensImage:
         else:  # reference_point == self.south_pole
             latitude = min_latitude + self.lens(magnitude / self.dpf, True)
 
-        if self.image_type == ImageType.DOUBLE_INSCRIBED and latitude < 0:
+        if self.image_type == LensImageType.DOUBLE_INSCRIBED and reference_point == self.south_pole:
             relative_position = complex(-relative_position.real, relative_position.imag)  # double inscribed inversion
         euler_relative_position = relative_position / magnitude
         longitude = np.log(euler_relative_position).imag
@@ -224,7 +225,7 @@ class LensImage:
         x = absolute_position.real
 
         reference_point = self.north_pole
-        if self.image_type == ImageType.DOUBLE_INSCRIBED:
+        if self.image_type == LensImageType.DOUBLE_INSCRIBED:
             halfway_x = self.image.shape[1] / 2
             if x >= halfway_x:
                 reference_point = self.south_pole

@@ -20,7 +20,7 @@
 #
 from enum import IntEnum, auto
 
-class ImageType(IntEnum):
+class LensImageType(IntEnum):
     FULL_FRAME = 1
     CROPPED_CIRCLE = 2
     INSCRIBED = 3

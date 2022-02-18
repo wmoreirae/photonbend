@@ -14,11 +14,18 @@
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
+#
+#  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+#  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+#  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+#  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+#
 import numpy as np
 from numba import njit, prange
 
-from lightbend.core import SphereImage, ImageType
+from lightbend.core import SphereImage, LensImageType
+from lightbend.utils import degrees_to_radians
 
 
 @njit
@@ -95,9 +102,10 @@ def make_sphere_image(source: np.array, lens):
 
     destiny_height = int(np.round(2 * radius))
     destiny_width = 2 * destiny_height
+    sphere_array = np.zeros((destiny_height, destiny_width, 3), np.core.uint8)
 
-    d_sphere = SphereImage(np.zeros((destiny_height, destiny_width, 3), np.core.uint8), ImageType.DOUBLE_INSCRIBED,
-                           np.pi * 2, lens)
+    d_sphere = SphereImage(sphere_array, LensImageType.DOUBLE_INSCRIBED,
+                           degrees_to_radians(190), lens)
 
     for row in range(destiny_height):
         for column in range(destiny_width):
@@ -109,7 +117,7 @@ def make_sphere_image(source: np.array, lens):
                 if y < 0 or y > source_height:
                     continue
                 value = source[y, x, :]
-                d_sphere.set_value_to_spherical(latitude, longitude, value)
+                sphere_array[row, column, :] = value
             except Exception:
                 continue
     return d_sphere
