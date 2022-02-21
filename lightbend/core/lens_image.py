@@ -24,27 +24,15 @@ import numpy as np
 from numba import uint8, float64, njit, typeof, complex128, cfunc, int64, bool_
 from numba.experimental import jitclass
 
-from lightbend.utils import vector_magnitude
-from lightbend.core.image_type import LensImageType
+from lightbend.utils import vector_magnitude, decompose
+from lightbend.core.lens_image_type import LensImageType
 
+DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]
 FULL_CIRCLE = (np.pi * 2)
 
 
-@njit
-def decompose(a_complex_number):
-    """Decomposes a complex number into it's real and imaginary parts and returns them as integers.
-    To turn the parts into integers, it rounds them first and the proceed s to cast them.
-
-    :param a_complex_number: any complex number
-    :return: a tuple of integers representing the real and imaginary parts of the original number
-    """
-    x = int(np.round(a_complex_number.real))
-    y = int(np.round(a_complex_number.imag))
-    return x, y
-
-
 @cfunc(float64(float64, bool_))
-def _a(_b, _c):
+def _a_numba_function_definition(_b, _c):
     """A SIMPLE IDENTITY FUNCTION THAT IS NOT MEANT TO BE USED!
 
     It is present only to make it easier to categorize functions marked with its decorator <@cfunc(float64(float64, bool_))>
@@ -60,7 +48,7 @@ spec = [
     ('dpf', float64),
     ('image', uint8[:, :, :]),
     ('image_type', int64),
-    ('lens', typeof(_a)),
+    ('lens', typeof(_a_numba_function_definition)),
 ]
 
 
@@ -69,9 +57,6 @@ class LensImage:
     """A class that maps images to a sphere
     This class allows us to get or set pixel values that are mapped to specific coordinates of that sphere. This
     enables us to convert images between different kinds of lenses or to create projections from it.
-
-    Not only that, this class also allows us to rotate the sphere so we can get different angles, which is essential
-    when dealing with 360 degree images or can greatly simplify creating traverse projection.
     """
 
     def __init__(self, image_arr, i_type, fov, lens):
@@ -159,18 +144,43 @@ class LensImage:
 
         return True
 
+    def get_from_cartesian(self, x: int, y: int) -> uint8[:]:
+        """ Get the value represented on the cartesian position x, y of this image
+
+        :param x: The horizontal position of the desired value
+        :param y: The vertical position of the desired value
+        :return: a triplet of values of type uint8
+        """
+        if self.check_position(x, y):
+            return self.image[y, x, :]
+        else:
+            raise Exception("The requested cartesian coordinates are outside the bounds of the image!")
+
+    def set_to_cartesian(self, x: int, y: int, value: uint8[:]) -> None:
+        """ Get the value represented on the cartesian position x, y of this image
+
+        :param value:
+        :param x: The horizontal position of the desired value
+        :param y: The vertical position of the desired value
+        :return: a triplet of values of type uint8
+        """
+        if self.check_position(x, y):
+            self.image[y, x, :] = value
+        else:
+            raise Exception("The target cartesian coordinates are outside the bounds of the image!")
+
     def get_from_spherical(self, latitude: float, longitude: float) -> uint8[:]:
-        x, y = self.translate_to_cartesian(latitude, longitude)
+        x, y = self.translate_spherical_to_cartesian(latitude, longitude)
         if self.is_position(x, y):
             return self.image[y, x, :]
         return np.zeros(3, np.core.uint8)
 
     def set_to_spherical(self, latitude, longitude, data):
-        x, y = self.translate_to_cartesian(latitude, longitude)
+        x, y = self.translate_spherical_to_cartesian(latitude, longitude)
         if self.is_position(x, y):
             self.image[y, x, :] = data
 
-    def translate_to_cartesian(self, latitude, longitude):
+    def translate_spherical_to_cartesian(self, latitude: float, longitude: float) -> Tuple[int, int]:
         """
         :param latitude:
         :param longitude:
@@ -190,7 +200,7 @@ class LensImage:
         x, y = decompose(position)
         return x, y
 
-    def translate_to_spherical(self, x, y):
+    def translate_cartesian_to_spherical(self, x: float, y: float) -> Tuple[float, float]:
         max_latitude = np.pi / 2
         min_latitude = max_latitude - self.fov / 2
         if self.image_type == LensImageType.DOUBLE_INSCRIBED:

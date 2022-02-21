@@ -87,7 +87,7 @@ def make_panoramic(source: SphereImage, desired_width):
         latitude = _mercator_y_latitude(radius, row, True)
         for column in prange(destiny_width):
             longitude = _mercator_x_longitude(radius, column, True)
-            destiny_array[row, column, :] = source.get_value_from_spherical(latitude, longitude)
+            destiny_array[row, column, :] = source.get_from_spherical(latitude, longitude)
 
     return destiny_array
 
@@ -114,7 +114,7 @@ def make_sphere_image(source: np.array, lens):
                 if y < 0 or y > source_height:
                     continue
                 value = source[y, x, :]
-                d_sphere.set_value_to_spherical(latitude, longitude, value)
+                d_sphere.set_to_spherical(latitude, longitude, value)
             except Exception:
                 continue
     return d_sphere

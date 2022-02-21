@@ -86,7 +86,7 @@ def make_projection(source: SphereImage, standard_parallel, desired_width):
         for column in prange(destiny_width):
             longitude = _projection_x_longitude(radius, standard_parallel, column, True)
             try:
-                destiny_array[row, column, :] = source.get_value_from_spherical(latitude, longitude)
+                destiny_array[row, column, :] = source.get_from_spherical(latitude, longitude)
             except Exception:
                 continue
 

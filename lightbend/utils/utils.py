@@ -18,6 +18,7 @@ from typing import Tuple, Callable
 import numpy as np
 from numba import njit
 
+
 @njit
 def decompose(a_complex_number):
     """Decomposes a complex number into it's real and imaginary parts and returns them as integers.
@@ -30,6 +31,7 @@ def decompose(a_complex_number):
     y = int(np.round(a_complex_number.imag))
     return x, y
 
+
 @njit
 def angle_from_vector(vector: complex):
     u_vector = unit_vector(vector)
@@ -39,6 +41,11 @@ def angle_from_vector(vector: complex):
 
 @njit
 def vector_magnitude(vector: complex):
+    """Computes the magnitude of a complex number vector
+
+        :param vector: A complex number
+        :return: A floating point scalar of the vector magnitude
+        """
     return np.sqrt(vector.real ** 2 + vector.imag ** 2)
 
 
@@ -126,3 +133,16 @@ def _Z_get_180_longitude(longitude):
     if np.pi < new_longitude:
         new_longitude -= (2 * np.pi)
     return new_longitude
+
+
+@njit
+def decompose(a_complex_number):
+    """Decomposes a complex number into it's real and imaginary parts and returns them as integers.
+    To turn the parts into integers, it rounds them first and the proceed s to cast them.
+
+    :param a_complex_number: any complex number
+    :return: a tuple of integers representing the real and imaginary parts of the original number
+    """
+    x = int(np.round(a_complex_number.real))
+    y = int(np.round(a_complex_number.imag))
+    return x, y
