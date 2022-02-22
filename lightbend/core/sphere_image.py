@@ -248,7 +248,7 @@ class SphereImage:
         r_latitude, r_longitude = self._get_rotated_spherical_coordinates(latitude, longitude, True)
         self.lens_image.set_to_spherical(r_latitude, r_longitude, data)
 
-    def translate_spherical_to_cartesian(self, latitude: float, longitude: float) -> Tuple[int, int]:
+    def translate_spherical_to_cartesian(self, latitude: float, longitude: float) -> DoubleCardinal:
         """Translate spherical coordinates to cartesian coordinates of the image
 
         :param latitude: The latitude of the location to be translated

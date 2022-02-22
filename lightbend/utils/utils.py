@@ -146,3 +146,25 @@ def decompose(a_complex_number):
     x = int(np.round(a_complex_number.real))
     y = int(np.round(a_complex_number.imag))
     return x, y
+
+
+@njit
+def weighted_sum(v1, v2, w1, w2):
+    sum_weight = w1 + w2
+    v1_arr = np.zeros(3, np.core.uint64)
+    v2_arr = np.zeros(3, np.core.uint64)
+
+    v1_arr[:] = v1[:]
+    v2_arr[:] = v2[:]
+
+    v1 = v1 * w1
+    v2 = v2 * w2
+    v3 = v1 + v2
+    v3 = v3 / sum_weight
+    v3 = v3.astype(np.core.uint8)
+    return v3
+
+
+@njit
+def _2ints(v1, v2):
+    return int(v1), int(v2)

@@ -71,7 +71,7 @@ def _projection_y_latitude(radius, standard_parallel: float, latitude_or_y: floa
         return latitude
 
 
-@njit(parallel=True)
+@njit(parallel=False)
 def make_projection(source: SphereImage, standard_parallel, desired_width):
     # TODO Add a super sampler
 
@@ -89,6 +89,7 @@ def make_projection(source: SphereImage, standard_parallel, desired_width):
                 destiny_array[row, column, :] = source.get_from_spherical(latitude, longitude)
             except Exception:
                 continue
+            # destiny_array[row, column, :] = source.get_from_spherical(latitude, longitude)
 
     return destiny_array
 
