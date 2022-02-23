@@ -127,6 +127,12 @@ class LensImage:
     def shape(self):
         return self.image.shape
 
+    def get_image_array(self):
+        """ Returns a copy of the underlying image matrix
+        :return: A copy of the image array
+        """
+        return np.copy(self.image)
+
     def is_position(self, x, y):
         """
         Checks whether the passed parameters are within the limits of the underlying image
@@ -140,6 +146,12 @@ class LensImage:
         return True
 
     def is_valid_position(self, x, y) -> bool:
+        """
+        Checks whether the passed parameters are within the limits of the underlying image and the lens specification
+        :param x: absolute x position of the image you want to check
+        :param y: absolute y position of the image you want to check
+        :return: True if withing the image, False otherwise
+        """
         if not self.is_position(x, y):
             return False
 
@@ -176,28 +188,36 @@ class LensImage:
 
     def get_from_spherical(self, latitude: float, longitude: float) -> uint8[:]:
         pos1, pos2 = self.translate_spherical_to_cartesian(latitude, longitude)
-        if self.image_type != LensImageType.DOUBLE_INSCRIBED:
-            return self.get_from_cartesian(*_2ints(*pos1))
+        try:
+            if self.image_type != LensImageType.DOUBLE_INSCRIBED:
+                return self.get_from_cartesian(*_2ints(*pos1))
+            else:  # DOUBLE_INSCRIBED
+                r_value = self._ds_get_from_spherical(latitude, pos1, pos2)
+                return r_value
+        except:
+            r = np.zeros(3, np.core.uint8)
+            r[:] = 0, 0, 0
+            return r
 
-        else:  # DOUBLE_INSCRIBED
-            double_image_latitude = (self.fov - np.pi) / 2
-            if (latitude > double_image_latitude) or (latitude < (-double_image_latitude)):
-                if latitude >= 0:
-                    return self.get_from_cartesian(*_2ints(*pos1))
-                else:
-                    return self.get_from_cartesian(*_2ints(*pos2))
+    def _ds_get_from_spherical(self, latitude, pos1, pos2):
+        r_value = np.zeros(3, np.core.uint8)
+        double_image_latitude = (self.fov - np.pi) / 2
+        if (latitude > double_image_latitude) or (latitude < (-double_image_latitude)):
+            if latitude >= 0:
+                r_value = self.get_from_cartesian(*_2ints(*pos1))
             else:
-                cross_range = 2 * double_image_latitude
-                factor_positive = cross_range - (double_image_latitude - latitude)
-                factor_negative = cross_range + (-double_image_latitude - latitude)
-                try:
-                    v_pos = self.get_from_cartesian(*_2ints(*pos1))
-                    v_neg = self.get_from_cartesian(*_2ints(*pos2))
-                except:
-                    print('pos1: ', pos1)
-                    print('pos2: ', pos2)
-                f_value = weighted_sum(v_pos, v_neg, factor_positive, factor_negative)
-                return f_value
+                r_value = self.get_from_cartesian(*_2ints(*pos2))
+        else:
+            cross_range = 2 * double_image_latitude
+            factor_positive = cross_range - (double_image_latitude - latitude)
+            factor_negative = cross_range + (-double_image_latitude - latitude)
+
+            v_pos = self.get_from_cartesian(*_2ints(*pos1))
+            v_neg = self.get_from_cartesian(*_2ints(*pos2))
+
+            f_value = weighted_sum(v_pos, v_neg, factor_positive, factor_negative)
+            r_value = f_value
+        return r_value
 
     def set_to_spherical(self, latitude, longitude, data):
         """Sets data to the position in the image that is represented by latitude and longitude.
@@ -208,16 +228,19 @@ class LensImage:
         :param data: The data that is to be put
         :return: None
         """
-        if not self.image_type == LensImageType.DOUBLE_INSCRIBED:
-            pos1, _ = self.translate_spherical_to_cartesian(latitude, longitude)
-            if pos1 != INVALID_POSITION:
-                self.set_to_cartesian(*_2ints(*pos1), data)
-        else:  # DOUBLE_INSCRIBED
-            pos1, pos2 = self.translate_spherical_to_cartesian(latitude, longitude)
-            if pos1 != INVALID_POSITION:
-                self.set_to_cartesian(*_2ints(*pos1), data)
-            if pos2 != INVALID_POSITION:
-                self.set_to_cartesian(*_2ints(*pos2), data)
+        try:
+            if not self.image_type == LensImageType.DOUBLE_INSCRIBED:
+                pos1, _ = self.translate_spherical_to_cartesian(latitude, longitude)
+                if pos1 != INVALID_POSITION:
+                    self.set_to_cartesian(*_2ints(*pos1), data)
+            else:  # DOUBLE_INSCRIBED
+                pos1, pos2 = self.translate_spherical_to_cartesian(latitude, longitude)
+                if pos1 != INVALID_POSITION:
+                    self.set_to_cartesian(*_2ints(*pos1), data)
+                if pos2 != INVALID_POSITION:
+                    self.set_to_cartesian(*_2ints(*pos2), data)
+        except Exception:
+            raise Exception("The given spherical coordinates are not represented on the cartesian image")
 
     def translate_spherical_to_cartesian(self, latitude: float, longitude: float) -> DoubleCardinal:
         """
@@ -235,30 +258,31 @@ class LensImage:
             return (x, y), INVALID_POSITION
 
         else:  # DOUBLE_INSCRIBED
-            double_image_latitude = self.fov - np.pi
-
-            # latitude > 0:
-            if latitude > (0 - double_image_latitude):
-                polar_distance = self.lens(np.pi / 2 - latitude, False) * self.dpf
-                factors = np.exp(longitude * 1j)
-                relative_position = factors * polar_distance
-                position = self.relative_to_absolute(relative_position, self.north_pole)
-                pos1 = decompose(position)
-            else:
-                pos1 = INVALID_POSITION
-
-            # latitude < 0
-            if latitude < (0 + double_image_latitude):
-                polar_distance = self.lens(np.pi / 2 + latitude, False) * self.dpf
-                factors = np.exp(longitude * 1j)
-                factors = complex(-factors.real, factors.imag)  # double_inscribed X inversion
-                relative_position = factors * polar_distance
-                position = self.relative_to_absolute(relative_position, self.south_pole)
-                pos2 = decompose(position)
-            else:
-                pos2 = INVALID_POSITION
-
+            pos1, pos2 = self._ds_translate_spherical_to_cartesian(latitude, longitude)
             return pos1, pos2
+
+    def _ds_translate_spherical_to_cartesian(self, latitude, longitude):
+        double_image_latitude = self.fov - np.pi
+        # latitude > 0:
+        if latitude > (0 - double_image_latitude):
+            polar_distance = self.lens(np.pi / 2 - latitude, False) * self.dpf
+            factors = np.exp(longitude * 1j)
+            relative_position = factors * polar_distance
+            position = self.relative_to_absolute(relative_position, self.north_pole)
+            pos1 = decompose(position)
+        else:
+            pos1 = INVALID_POSITION
+        # latitude < 0
+        if latitude < (0 + double_image_latitude):
+            polar_distance = self.lens(np.pi / 2 + latitude, False) * self.dpf
+            factors = np.exp(longitude * 1j)
+            factors = complex(-factors.real, factors.imag)  # double_inscribed X inversion
+            relative_position = factors * polar_distance
+            position = self.relative_to_absolute(relative_position, self.south_pole)
+            pos2 = decompose(position)
+        else:
+            pos2 = INVALID_POSITION
+        return pos1, pos2
 
     def translate_cartesian_to_spherical(self, x: float, y: float) -> Tuple[float, float]:
         max_latitude = np.pi / 2

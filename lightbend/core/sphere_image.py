@@ -31,7 +31,7 @@ from numba.experimental import jitclass
 
 from lightbend.core import LensImage
 
-DoubleCardinal = Tuple[Tuple[int, int],Tuple[int, int]]
+DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]
 
 FULL_CIRCLE = (np.pi * 2)
 
@@ -187,7 +187,7 @@ class SphereImage:
         """ Returns a copy of the underlying image matrix
         :return: A copy of the image array
         """
-        return np.copy(self.lens_image.image)
+        return self.lens_image.get_image_array()
 
     @property
     def shape(self):
@@ -308,7 +308,7 @@ def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereIma
                     lat, lon = this_image.translate_cartesian_to_spherical(column, row)
                 except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
                     continue
-                this_image.lens_image.image[row, column, :] = that_image.get_from_spherical(lat, lon)
+                this_image.set_to_cartesian(column, row, that_image.get_from_spherical(lat, lon))
 
             else:
                 # super sampling
@@ -328,11 +328,9 @@ def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereIma
                         super_sample_matrix[ss_row, ss_column, :] = that_image.get_from_spherical(lat, lon)
 
                 # Calculate the pixel mean and assign it!
-                ss_mean_1st = np.mean(super_sample_matrix[:, :, 0])
-                ss_mean_2nd = np.mean(super_sample_matrix[:, :, 1])
-                ss_mean_3rd = np.mean(super_sample_matrix[:, :, 2])
-                this_image.lens_image.image[row, column, 0] = int(np.round(ss_mean_1st))
-                this_image.lens_image.image[row, column, 1] = int(np.round(ss_mean_2nd))
-                this_image.lens_image.image[row, column, 2] = int(np.round(ss_mean_3rd))
-
+                ss_mean = np.zeros(3, np.core.uint8)
+                ss_mean[0] = int(np.round(np.mean(super_sample_matrix[:, :, 0])))
+                ss_mean[1] = int(np.round(np.mean(super_sample_matrix[:, :, 1])))
+                ss_mean[2] = int(np.round(np.mean(super_sample_matrix[:, :, 2])))
+                this_image.set_to_cartesian(column, row, ss_mean[:])
     return
