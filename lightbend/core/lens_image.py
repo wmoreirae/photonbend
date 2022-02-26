@@ -16,12 +16,11 @@
 
 
 # TODO Improve on the use of exceptions
-from enum import IntEnum, auto, Enum
 from typing import Tuple
 
 import numpy as np
 
-from numba import uint8, float64, njit, typeof, complex128, cfunc, int64, bool_
+from numba import uint8, float64, typeof, complex128, cfunc, int64, bool_
 from numba.experimental import jitclass
 
 from lightbend.utils import vector_magnitude, decompose, weighted_sum
@@ -78,13 +77,13 @@ class LensImage:
         if self.image_type == LensImageType.DOUBLE_INSCRIBED:  # double image
             if width > height:  # horizontal
                 real_width = width / 2
-                self.north_pole = np.complex(real_width, height) / 2
+                self.north_pole = complex(real_width, height) / 2
                 self.north_pole -= complex(0.5, 0.5)
                 self.south_pole = self.north_pole + real_width
             else:
                 raise ValueError("The LensImage class doesn't support vertical double inscribed images")
         else:  # Simple image
-            self.north_pole = np.complex(width, height) / 2
+            self.north_pole = complex(width, height) / 2
             self.north_pole -= complex(0.5, 0.5)
             self.south_pole = complex(0, 0)
 

@@ -20,7 +20,6 @@
 # should be used so that we can have a reasonable execution time. This goal has benn achieved here at the cost of some
 # python functionality.
 
-# TODO Add super-sampling (possibly adapt code from the original camera.imaging module)
 # TODO Improve on the use of exceptions
 from typing import Tuple
 
