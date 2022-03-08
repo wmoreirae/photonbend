@@ -10,8 +10,10 @@ jupyter = "*"
 numba = "*"
 pipfile = "*"
 scipy = "*"
+click = "*"
 
 [dev-packages]
+pytest = "*"
 
 [requires]
 python_version = "3.8"
