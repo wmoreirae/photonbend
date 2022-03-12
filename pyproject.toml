@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "lightbend"
+version = "0.1.0"
+description = "Lightbend deals with camera pictures (especially fisheye) and some projections like equirectangular"
+authors = ["Edson Moreira <w.moreirae@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8,<3.11"
+Pillow = "^9.0.1"
+numpy = ">=1.18,<1.22"
+numba = "^0.55.1"
+scipy = "^1.8.0"
+click = "^8.0.4"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0.1"
+
+[tool.poetry.scripts]
+lightbend = "lightbend.scripts.main:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

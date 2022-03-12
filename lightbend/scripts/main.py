@@ -14,7 +14,43 @@
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from .scripts.main import main, alter_photo
 
-if __name__ == '__main__':
-    main()
+import numba
+import numpy as np
+from PIL import Image
+
+from lightbend.lens import equisolid, rectilinear, equidistant, \
+    orthographic, stereographic
+from lightbend.utils import degrees_to_radians
+
+from lightbend.core.sphere_image import SphereImage, LensImage
+
+import click
+
+
+
+
+
+@click.command()
+def make_pano():
+    pass
+
+
+@click.command()
+def make_photo():
+    pass
+
+
+@click.command()
+@click.option('-i', '--input', required=True, type=click.Path(exists=True))
+@click.option('--ilens', required=True)
+@click.option('--ifov', required=True, type=click.FLOAT)
+@click.option('--olens', required=True)
+@click.option('--ofov', required=True, type=click.FLOAT)
+@click.argument('output')
+def alter_photo(input, ifov, olens, ofov, output):
+    pass
+
+@click.group([alter_photo])
+def main():
+    pass
