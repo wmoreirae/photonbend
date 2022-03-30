@@ -65,7 +65,7 @@ class LensImage:
             assert fov >= np.pi, "The FOV of a DOUBLE_INSCRIBED image should be of at minimum pi radians"
 
         self.image = image_arr
-        self.image_type = i_typegity
+        self.image_type = i_type
         self.lens = lens
         self.fov = fov
         self._set_poles()

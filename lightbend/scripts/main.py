@@ -114,9 +114,10 @@ def check_output(output: Path):
               help='The lens type that was used on the input photo. ' + double_type_fov_warning,
               type=lens_choices)
 @click.option('--ofov', required=True, type=click.FLOAT, help='The lens field of view of the output photo in degrees.')
+@click.option('--ssample', required=False, type=click.INT, help='The ammount of supersampling applied (ss²)', default=1)
 @click.argument('output', type=click.Path(exists=False))
 def alter_photo(input: click.Path, itype: str, ilens: str, ifov: float, otype: str, olens: str, ofov: float,
-                output: click.Path) -> None:
+                output: click.Path, ssample: int) -> None:
     """Change the the lens and FoV of a photo.
 
     \b
@@ -151,7 +152,7 @@ def alter_photo(input: click.Path, itype: str, ilens: str, ifov: float, otype: s
     source_sphere = SphereImage(source_array, source_type, source_fov, source_lens)
     destiny_sphere = SphereImage(np.zeros(source_array.shape, np.core.uint8), destiny_type, destiny_fov, destiny_lens)
 
-    destiny_sphere.map_from_sphere_image(source_sphere, 1)
+    destiny_sphere.map_from_sphere_image(source_sphere, ssample)
     destiny_arr = destiny_sphere.get_image_array()
     destiny_image = Image.fromarray(destiny_arr)
 
