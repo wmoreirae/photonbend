@@ -17,8 +17,8 @@
 
 # A lot of the code in here doesn't make the use of the standards and best tools available in the Python language.
 # Since we are dealing with a lot of arrays and calculations, it was thought that Numba (https://numba.pydata.org/)
-# should be used so that we can have a reasonable execution time. This goal has benn achieved here at the cost of some
-# python functionality.
+# should be used so that the code can run in reasonable amount of time. This goal has benn achieved here at the cost of
+# some python functionality.
 
 # TODO Improve on the use of exceptions
 from typing import Tuple
