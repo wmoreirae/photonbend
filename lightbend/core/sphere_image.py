@@ -157,8 +157,8 @@ class SphereImage:
 
         rot = _calculate_rotation_matrix(pitch, yaw, roll)
         i_rot = _calculate_rotation_matrix(-pitch, -yaw, -roll)
-        self.rotation_matrix[:] = rot[:]
-        self.i_rotation_matrix[:] = i_rot[:]
+        self.rotation_matrix = rot
+        self.i_rotation_matrix = i_rot
 
     def add_rotation(self, pitch, yaw, roll):
         # TODO change method to chain rotations instead of simply adding them together.
