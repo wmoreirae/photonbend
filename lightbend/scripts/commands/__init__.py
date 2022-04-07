@@ -13,25 +13,3 @@
 #  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-import click
-import logging
-from .commands.alter_photo import alter_photo
-from .commands.make_pano import make_pano
-
-
-@click.group()
-def main():
-    """The lightbend utility allows one to change photos and panoramas.
-    It provides multiple commands to change different kinds of images.
-    """
-
-
-@main.command()
-def make_photo():
-    pass
-
-
-main.command()(make_pano)
-
-main.command()(alter_photo)

@@ -13,25 +13,29 @@
 #  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 import click
-import logging
-from .commands.alter_photo import alter_photo
-from .commands.make_pano import make_pano
 
+lens_choices = click.Choice(['equidistant', 'equisolid', 'orthographic', 'rectilinear', 'stereographic'])
+type_choices = click.Choice(['inscribed', 'double', 'cropped', 'full'])
 
-@click.group()
-def main():
-    """The lightbend utility allows one to change photos and panoramas.
-    It provides multiple commands to change different kinds of images.
+type_choices_help = \
     """
 
+    \b
+    The choices are:
+    - inscribed: The valid data is on a inscribed circle inscribed.
+    - double: The valid data is on two inscribed side-by-side circles.
+    - cropped: The valid data is on a inscribed circle, top-and-bottom cropped. 
+    - full: The whole area of the image is valid data. 
+    """
 
-@main.command()
-def make_photo():
-    pass
+double_type_fov_warning = \
+    """
 
+    IMPORTANT: When dealing with double images, you should pass the FOV of a single circle and it must be larger than 180."""
 
-main.command()(make_pano)
-
-main.command()(alter_photo)
+rotation_help = \
+    """
+    The rotation that should be applied to the camera.
+    This is a 3-valued parameter in the form <pitch yaw roll>
+    """

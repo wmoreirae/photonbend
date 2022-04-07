@@ -30,7 +30,7 @@ from lightbend.utils import degrees_to_radians
 
 @njit
 def _projection_function(radius, standard_parallel, longitude_or_x: float, latitude_or_y: float, cardinal: bool):
-    """ Gives the mercator projection function or it's inverse
+    """ Gives the equirectangular projection function or it's inverse
 
     :param radius: The globe radius to project
     :param longitude_or_x:
@@ -72,7 +72,7 @@ def _projection_y_latitude(radius, standard_parallel: float, latitude_or_y: floa
 
 
 @njit(parallel=False)
-def make_projection(source: SphereImage, standard_parallel, desired_width):
+def make_projection(source: SphereImage, standard_parallel, desired_width) -> np.ndarray:
     # TODO Add a super sampler
 
     radius = desired_width / (np.pi * 2)
@@ -89,7 +89,6 @@ def make_projection(source: SphereImage, standard_parallel, desired_width):
                 destiny_array[row, column, :] = source.get_from_spherical(latitude, longitude)
             except Exception:
                 continue
-            # destiny_array[row, column, :] = source.get_from_spherical(latitude, longitude)
 
     return destiny_array
 
