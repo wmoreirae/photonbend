@@ -23,6 +23,7 @@
 #
 import sys
 from pathlib import Path
+from typing import Tuple
 
 import click
 import numpy as np
@@ -33,7 +34,7 @@ from lightbend.core.sphere_image import SphereImage
 from lightbend.lens import equisolid, rectilinear, equidistant, \
     orthographic, stereographic
 from lightbend.utils import degrees_to_radians
-from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning
+from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning, rotation_help
 
 
 def _check_fov(fov: float, image_type: LensImageType):
@@ -78,8 +79,9 @@ def check_output(output: Path):
 @click.option('--ofov', required=True, type=click.FLOAT, help='The lens field of view of the output photo in degrees.')
 @click.option('--ssample', required=False, type=click.INT, help='The ammount of supersampling applied (ss²)', default=1)
 @click.argument('output_image', type=click.Path(exists=False))
+@click.option('-r', '--rotation', required=False, type=click.FLOAT, nargs=3, default=(0, 0, 0), help=rotation_help)
 def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, otype: str, olens: str, ofov: float,
-                output_image: click.Path, ssample: int) -> None:
+                output_image: click.Path, ssample: int, rotation: Tuple[float, float, float]) -> None:
     """Change the the lens and FoV of a photo.
 
     \b
@@ -117,6 +119,11 @@ def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, ot
 
     source_sphere = SphereImage(source_array, source_type, source_fov, source_lens)
     destiny_sphere = SphereImage(np.zeros(source_array.shape, np.core.uint8), destiny_type, destiny_fov, destiny_lens)
+
+    if rotation != (0, 0, 0):
+        rotation_rad = list(map(degrees_to_radians, rotation))
+        pitch, yaw, roll = rotation_rad
+        source_sphere.set_rotation(pitch, roll, yaw)
 
     destiny_sphere.map_from_sphere_image(source_sphere, ssample)
     destiny_arr = destiny_sphere.get_image_array()
