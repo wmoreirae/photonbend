@@ -18,6 +18,7 @@ import click
 import logging
 from .commands.alter_photo import alter_photo
 from .commands.make_pano import make_pano
+from .commands.make_photo import make_photo
 
 
 @click.group()
@@ -27,11 +28,6 @@ def main():
     """
 
 
-@main.command()
-def make_photo():
-    pass
-
-
 main.command()(make_pano)
-
 main.command()(alter_photo)
+main.command()(make_photo)

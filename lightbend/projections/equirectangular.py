@@ -53,7 +53,7 @@ def _projection_function(radius, standard_parallel, longitude_or_x: float, latit
 @njit
 def _projection_x_longitude(radius: float, standard_parallel: float, longitude_or_x: float, cardinal: bool) -> float:
     if not cardinal:
-        x = (radius * longitude_or_x) * np.cos(standard_parallel)
+        x = (radius * (longitude_or_x + np.pi)) * np.cos(standard_parallel)
         return x
     else:
         longitude = longitude_or_x / (np.cos(standard_parallel) * radius)
@@ -77,7 +77,7 @@ def make_projection(source: SphereImage, standard_parallel, desired_width) -> np
 
     radius = desired_width / (np.pi * 2)
 
-    destiny_width = int(np.abs(np.round(_projection_x_longitude(radius, standard_parallel, np.pi, False)))) * 2
+    destiny_width = int(np.abs(np.round(_projection_x_longitude(radius, standard_parallel, np.pi, False))))
     destiny_height = int(np.abs(np.round(_projection_y_latitude(radius, standard_parallel, -np.pi / 2, False))))
     destiny_array = np.zeros((destiny_height, destiny_width, 3), np.core.uint8)
 
@@ -94,29 +94,38 @@ def make_projection(source: SphereImage, standard_parallel, desired_width) -> np
 
 
 @njit(parallel=False)
-def make_sphere_image(source: np.array, lens):
+def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: float):
     source_height, source_width = source.shape[:2]
     standard_parallel = np.arccos(source_width / 2 / source_height)
 
     radius = source_height / np.pi
 
     destiny_height = int(np.round(2 * radius))
-    destiny_width = 2 * destiny_height
+    destiny_width = destiny_height
 
-    d_sphere = SphereImage(np.zeros((destiny_height, destiny_width, 3), np.core.uint8), LensImageType.DOUBLE_INSCRIBED,
-                           degrees_to_radians(195), lens)
+    if image_type == LensImageType.DOUBLE_INSCRIBED:
+        destiny_width = destiny_width * 2
+
+    d_sphere = SphereImage(np.zeros((destiny_height, destiny_width, 3), np.core.uint8), image_type,
+                           degrees_to_radians(fov), lens)
 
     for row in range(destiny_height):
         for column in range(destiny_width):
             try:
                 latitude, longitude = d_sphere.translate_cartesian_to_spherical(column, row)
+                # print(latitude)
+                # print(longitude)
+                # print('-------')
+
                 x, y = _projection_function(radius, standard_parallel, longitude, latitude, False)
                 x = int(np.round(x))
                 y = int(np.round(y))
-                if y < 0 or y > source_height:
+                if x < 0 or x >= source_width:
                     continue
-                value = source[y, x, :]
-                d_sphere.lens_image.image[row, column, :] = value[:]
+                if y < 0 or y >= source_height:
+                    continue
+                value = source[y, x]
+                d_sphere.set_to_cartesian(column, row, value)
             except Exception:
                 continue
     return d_sphere
