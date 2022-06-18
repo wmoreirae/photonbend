@@ -329,8 +329,8 @@ def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereIma
 
                 # Calculate the pixel mean and assign it!
                 ss_mean = np.zeros(3, np.core.uint8)
-                ss_mean[0] = int(np.round(np.mean(super_sample_matrix[:, :, 0])))
-                ss_mean[1] = int(np.round(np.mean(super_sample_matrix[:, :, 1])))
-                ss_mean[2] = int(np.round(np.mean(super_sample_matrix[:, :, 2])))
+                ss_mean[0] = int(round(np.mean(super_sample_matrix[:, :, 0])))
+                ss_mean[1] = int(round(np.mean(super_sample_matrix[:, :, 1])))
+                ss_mean[2] = int(round(np.mean(super_sample_matrix[:, :, 2])))
                 this_image.set_to_cartesian(column, row, ss_mean[:])
     return

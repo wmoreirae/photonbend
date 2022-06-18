@@ -156,7 +156,7 @@ class LensImage:
             return False
 
         relative_position, _ = self.absolute_to_relative(complex(x, y))
-        if np.round(vector_magnitude(relative_position)) <= self.maximum_magnitude:
+        if round(vector_magnitude(relative_position)) <= self.maximum_magnitude:
             return False
 
         return True

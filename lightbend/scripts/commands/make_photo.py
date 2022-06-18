@@ -23,7 +23,6 @@ import numpy as np
 from PIL import Image
 
 from lightbend.core.lens_image_type import LensImageType
-from lightbend.core.sphere_image import SphereImage
 from lightbend.projections.equirectangular import make_sphere_image
 from lightbend.lens import equisolid, rectilinear, equidistant, \
     orthographic, stereographic
@@ -91,7 +90,7 @@ def make_photo(input_image: click.Path, type: str, lens: str, fov: float, output
 
     source_lens = lens_types[lens]
     source_type = types_dict[type]
-    source_fov = _check_fov(fov, source_type)
+    # source_fov = _check_fov(fov, source_type)
 
     try:
         with Image.open(input_image) as image:
@@ -101,20 +100,8 @@ def make_photo(input_image: click.Path, type: str, lens: str, fov: float, output
         print('Exiting!')
         sys.exit(1)
 
-    source_sphere = make_sphere_image(source_array, lens_types[lens], types_dict[type], fov)
+    source_sphere = make_sphere_image(source_array, source_lens, source_type, fov, rotation)
 
-    """
-    if rotation != (0, 0, 0):
-        rotation_rad = list(map(degrees_to_radians, rotation))
-        pitch, yaw, roll = rotation_rad
-        source_sphere.set_rotation(pitch, roll, yaw)
-    """
-    """
-    ds_array = np.zeros(source_sphere.shape, np.core.uint8)
-
-    destiny_sphere = SphereImage(ds_array, otype, ofov, olens)
-    destiny_sphere.map_from_sphere_image(source_sphere, ssample)
-    """
     destiny_arr = source_sphere.get_image_array()
     destiny_image = Image.fromarray(destiny_arr)
 

@@ -21,6 +21,8 @@
 #  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 #
 #
+from typing import Tuple
+
 import numpy as np
 from numba import njit, prange
 
@@ -77,8 +79,8 @@ def make_projection(source: SphereImage, standard_parallel, desired_width) -> np
 
     radius = desired_width / (np.pi * 2)
 
-    destiny_width = int(np.abs(np.round(_projection_x_longitude(radius, standard_parallel, np.pi, False))))
-    destiny_height = int(np.abs(np.round(_projection_y_latitude(radius, standard_parallel, -np.pi / 2, False))))
+    destiny_width = int(np.abs(round(_projection_x_longitude(radius, standard_parallel, np.pi, False))))
+    destiny_height = int(np.abs(round(_projection_y_latitude(radius, standard_parallel, -np.pi / 2, False))))
     destiny_array = np.zeros((destiny_height, destiny_width, 3), np.core.uint8)
 
     for row in prange(destiny_height):
@@ -94,13 +96,15 @@ def make_projection(source: SphereImage, standard_parallel, desired_width) -> np
 
 
 @njit(parallel=False)
-def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: float):
+def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: float,
+                      rotation: Tuple[float, float, float]):
     source_height, source_width = source.shape[:2]
-    standard_parallel = np.arccos(source_width / 2 / source_height)
+    standard_parallel = np.arccos(min(1.0, source_width / 2 / source_height))
 
-    radius = source_height / np.pi
+    # -0.1 is a dirty trick to go around rounding problems and continuous nature of geometry
+    radius = (source_height - 0.1) / np.pi
 
-    destiny_height = int(np.round(2 * radius))
+    destiny_height = int(round(np.pi * radius))
     destiny_width = destiny_height
 
     if image_type == LensImageType.DOUBLE_INSCRIBED:
@@ -108,27 +112,22 @@ def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: fl
 
     d_sphere = SphereImage(np.zeros((destiny_height, destiny_width, 3), np.core.uint8), image_type,
                            degrees_to_radians(fov), lens)
-    print("Radius:")
-    print(radius)
-    print("Standard Parallel")
-    print(standard_parallel)
-    print('-------')
+
+    if rotation != (0, 0, 0):
+        rotation_rad = list(map(degrees_to_radians, rotation))
+        pitch, yaw, roll = rotation_rad
+        d_sphere.set_rotation(pitch, roll, yaw)
+
     for row in range(destiny_height):
         for column in range(destiny_width):
             try:
                 latitude, longitude = d_sphere.translate_cartesian_to_spherical(column, row)
-                print('long, lat')
-                print(longitude)
-                print(latitude)
-                print('-------')
 
                 x, y = _projection_function(radius, standard_parallel, longitude, latitude, False)
-                print('x, y')
-                print(x)
-                print(y)
-                print('-------')
-                x = int(np.round(x))
-                y = int(np.round(y))
+
+                x = int(round(x))
+                y = int(round(y))
+
                 if x < 0 or x >= source_width:
                     continue
                 if y < 0 or y >= source_height:
@@ -141,10 +140,5 @@ def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: fl
 
 
 def compute_best_width(source: SphereImage) -> int:
-    factor = source.lens_image.lens(np.pi / 2, False)
-    dpf = source.lens_image.dpf
-    result = int(np.round(factor * dpf * 2 * np.pi))
-
-    if result % 2 != 0:
-        result = result +1
+    result = 2 * (int(round(2 * source.lens_image.shape[0])) // 2)
     return result

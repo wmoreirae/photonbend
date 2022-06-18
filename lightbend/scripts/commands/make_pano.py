@@ -69,7 +69,7 @@ def check_output(output: Path):
 @click.option('-r', '--rotation', required=False, type=click.FLOAT, nargs=3, default=(0, 0, 0), help=rotation_help)
 @click.argument('output_image', type=click.Path(exists=False))
 def make_pano(input_image: click.Path, type: str, lens: str, fov: float, output_image: click.Path,
-              ssample: int, rotation: Tuple) -> None:
+              ssample: int, rotation: Tuple[float, float, float]) -> None:
     """Make a panorama out of a photo.
 
     \b

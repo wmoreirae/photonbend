@@ -27,8 +27,8 @@ def decompose(a_complex_number):
     :param a_complex_number: any complex number
     :return: a tuple of integers representing the real and imaginary parts of the original number
     """
-    x = int(np.round(a_complex_number.real))
-    y = int(np.round(a_complex_number.imag))
+    x = int(round(a_complex_number.real))
+    y = int(round(a_complex_number.imag))
     return x, y
 
 
@@ -82,7 +82,7 @@ def unit_vector(vector: complex) -> complex:
 
 @njit
 def c_round(complex_number) -> Tuple[int, int]:
-    return int(np.round(complex_number.real)), int(np.round(complex_number.imag))
+    return int(round(complex_number.real)), int(round(complex_number.imag))
 
 
 @njit
@@ -143,8 +143,8 @@ def decompose(a_complex_number):
     :param a_complex_number: any complex number
     :return: a tuple of integers representing the real and imaginary parts of the original number
     """
-    x = int(np.round(a_complex_number.real))
-    y = int(np.round(a_complex_number.imag))
+    x = int(round(a_complex_number.real))
+    y = int(round(a_complex_number.imag))
     return x, y
 
 
