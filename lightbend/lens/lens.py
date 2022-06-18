@@ -33,7 +33,8 @@ def _rectilinear(theta):
     It is best to limit its use to lens angles of at most 165 degrees.
     As the angle presented is halved, it should not see a theta angle larger than 82.5 degrees.
     """
-    assert theta > 0
+    if theta < 0:
+        raise ValueError('The angle theta cannot be negative')
     if theta > degrees_to_radians(89):
         raise ValueError('The rectilinear function was not made to handle FOV larger than 179 degrees')
     return np.tan(theta)

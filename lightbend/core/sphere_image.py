@@ -254,7 +254,8 @@ class SphereImage:
         :param longitude: The longitude of the location to be translated
         :return: The cartesian coordinates of the image represented by the spherical coordinates passed
         """
-        assert (-np.pi / 2) <= latitude <= (np.pi / 2), "latitude should be between pi/2 and -pi/2"
+        if not (-np.pi / 2) <= latitude <= (np.pi / 2):
+            raise ValueError("latitude should be between pi/2 and -pi/2")
 
         r_latitude, r_longitude = self._get_rotated_spherical_coordinates(latitude, longitude, True)
         xy1, xy2 = self.lens_image.translate_spherical_to_cartesian(r_latitude, r_longitude)

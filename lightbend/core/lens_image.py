@@ -62,7 +62,8 @@ class LensImage:
 
     def __init__(self, image_arr, i_type, fov, lens):
         if i_type == LensImageType.DOUBLE_INSCRIBED:
-            assert fov >= np.pi, "The FOV of a DOUBLE_INSCRIBED image should be of at minimum pi radians"
+            if fov < np.pi:
+                raise ValueError("The FOV of a DOUBLE_INSCRIBED image should be of at minimum pi radians")
 
         self.image = image_arr
         self.image_type = i_type
