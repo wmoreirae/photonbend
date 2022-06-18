@@ -59,16 +59,16 @@ def check_output(output: Path):
 
 
 @click.argument('input_image', type=click.Path(exists=True))
-@click.option('--itype', required=True, help='The type of the input image. ' + type_choices_help,
+@click.option('--type', required=True, help='The type of the input image. ' + type_choices_help,
               type=type_choices)
-@click.option('--ilens', required=True, help='The lens type that was used on the input photo.',
+@click.option('--lens', required=True, help='The lens type that was used on the input photo.',
               type=lens_choices)
-@click.option('--ifov', required=True, type=click.FLOAT,
+@click.option('--fov', required=True, type=click.FLOAT,
               help='The lens field of view of the input photo in degrees. ' + double_type_fov_warning)
 @click.option('--ssample', required=False, type=click.INT, help='The ammount of supersampling applied', default=1)
 @click.option('-r', '--rotation', required=False, type=click.FLOAT, nargs=3, default=(0, 0, 0), help=rotation_help)
 @click.argument('output_image', type=click.Path(exists=False))
-def make_pano(input_image: click.Path, itype: str, ilens: str, ifov: float, output_image: click.Path,
+def make_pano(input_image: click.Path, type: str, lens: str, fov: float, output_image: click.Path,
               ssample: int, rotation: Tuple) -> None:
     """Make a panorama out of a photo.
 
@@ -89,9 +89,9 @@ def make_pano(input_image: click.Path, itype: str, ilens: str, ifov: float, outp
                   'rectilinear': rectilinear,
                   'stereographic': stereographic}
 
-    source_lens = lens_types[ilens]
-    source_type = types_dict[itype]
-    source_fov = _check_fov(ifov, source_type)
+    source_lens = lens_types[lens]
+    source_type = types_dict[type]
+    source_fov = _check_fov(fov, source_type)
 
     try:
         with Image.open(input_image) as image:

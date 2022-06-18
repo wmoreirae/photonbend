@@ -56,7 +56,7 @@ def _projection_x_longitude(radius: float, standard_parallel: float, longitude_o
         x = (radius * (longitude_or_x + np.pi)) * np.cos(standard_parallel)
         return x
     else:
-        longitude = longitude_or_x / (np.cos(standard_parallel) * radius)
+        longitude = (longitude_or_x / (np.cos(standard_parallel) * radius)) - np.pi
         return longitude
 
 
@@ -108,16 +108,25 @@ def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: fl
 
     d_sphere = SphereImage(np.zeros((destiny_height, destiny_width, 3), np.core.uint8), image_type,
                            degrees_to_radians(fov), lens)
-
+    print("Radius:")
+    print(radius)
+    print("Standard Parallel")
+    print(standard_parallel)
+    print('-------')
     for row in range(destiny_height):
         for column in range(destiny_width):
             try:
                 latitude, longitude = d_sphere.translate_cartesian_to_spherical(column, row)
-                # print(latitude)
-                # print(longitude)
-                # print('-------')
+                print('long, lat')
+                print(longitude)
+                print(latitude)
+                print('-------')
 
                 x, y = _projection_function(radius, standard_parallel, longitude, latitude, False)
+                print('x, y')
+                print(x)
+                print(y)
+                print('-------')
                 x = int(np.round(x))
                 y = int(np.round(y))
                 if x < 0 or x >= source_width:
@@ -134,4 +143,8 @@ def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: fl
 def compute_best_width(source: SphereImage) -> int:
     factor = source.lens_image.lens(np.pi / 2, False)
     dpf = source.lens_image.dpf
-    return int(np.round(factor * dpf * 2 * np.pi))
+    result = int(np.round(factor * dpf * 2 * np.pi))
+
+    if result % 2 != 0:
+        result = result +1
+    return result

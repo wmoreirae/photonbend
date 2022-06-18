@@ -59,16 +59,16 @@ def check_output(output: Path):
 
 
 @click.argument('input_image', type=click.Path(exists=True))
-@click.option('--otype', required=True, help='The type of the output image. ' + type_choices_help,
+@click.option('--type', required=True, help='The type of the output image. ' + type_choices_help,
               type=type_choices)
-@click.option('--olens', required=True, help='The lens type to be used on the output photo.',
+@click.option('--lens', required=True, help='The lens type to be used on the output photo.',
               type=lens_choices)
-@click.option('--ofov', required=True, type=click.FLOAT,
+@click.option('--fov', required=True, type=click.FLOAT,
               help='The lens field of view of the output photo in degrees. ' + double_type_fov_warning)
 @click.option('--ssample', required=False, type=click.INT, help='The ammount of supersampling applied', default=1)
 @click.option('-r', '--rotation', required=False, type=click.FLOAT, nargs=3, default=(0, 0, 0), help=rotation_help)
 @click.argument('output_image', type=click.Path(exists=False))
-def make_photo(input_image: click.Path, otype: str, olens: str, ofov: float, output_image: click.Path,
+def make_photo(input_image: click.Path, type: str, lens: str, fov: float, output_image: click.Path,
                ssample: int, rotation: Tuple) -> None:
     """Make a photo out of a panorama.
 
@@ -89,9 +89,9 @@ def make_photo(input_image: click.Path, otype: str, olens: str, ofov: float, out
                   'rectilinear': rectilinear,
                   'stereographic': stereographic}
 
-    source_lens = lens_types[olens]
-    source_type = types_dict[otype]
-    source_fov = _check_fov(ofov, source_type)
+    source_lens = lens_types[lens]
+    source_type = types_dict[type]
+    source_fov = _check_fov(fov, source_type)
 
     try:
         with Image.open(input_image) as image:
@@ -101,7 +101,7 @@ def make_photo(input_image: click.Path, otype: str, olens: str, ofov: float, out
         print('Exiting!')
         sys.exit(1)
 
-    source_sphere = make_sphere_image(source_array, lens_types[olens], types_dict[otype], ofov)
+    source_sphere = make_sphere_image(source_array, lens_types[lens], types_dict[type], fov)
 
     """
     if rotation != (0, 0, 0):
