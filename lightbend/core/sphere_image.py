@@ -50,21 +50,15 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
     # TODO unwind the matrices and wind them up with array methods so they are contiguous
     cos_pitch = np.cos(pitch)
     sin_pitch = np.sin(pitch)
-    pitch_matrix = np.array(((1, 0, 0),
-                             (0, cos_pitch, -sin_pitch),
-                             (0, sin_pitch, cos_pitch))).T
+    pitch_matrix = np.array((1, 0, 0, 0, cos_pitch, sin_pitch, 0, -sin_pitch, cos_pitch)).reshape((3, 3))
 
     cos_yaw = np.cos(yaw)
     sin_yaw = np.sin(yaw)
-    yaw_matrix = np.array(((cos_yaw, 0, sin_yaw),
-                           (0, 1, 0),
-                           (-sin_yaw, 0, cos_yaw))).T
+    yaw_matrix = np.array((cos_yaw, 0, -sin_yaw, 0, 1, 0, sin_yaw, 0, cos_yaw)).reshape((3, 3))
 
     cos_roll = np.cos(roll)
     sin_roll = np.sin(roll)
-    roll_matrix = np.array(((cos_roll, -sin_roll, 0),
-                            (sin_roll, cos_roll, 0),
-                            (0, 0, 1))).T
+    roll_matrix = np.array((cos_roll, sin_roll, 0, -sin_roll, cos_roll, 0, 0, 0, 1)).reshape((3, 3))
 
     rotation_matrix = pitch_matrix @ yaw_matrix @ roll_matrix
 
