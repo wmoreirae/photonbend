@@ -29,11 +29,11 @@ import click
 import numpy as np
 from PIL import Image
 
-from lightbend.core.lens_image_type import LensImageType
-from lightbend.core.sphere_image import SphereImage
-from lightbend.lens import equisolid, rectilinear, equidistant, \
+from photonbend.core.lens_image_type import LensImageType
+from photonbend.core.sphere_image import SphereImage
+from photonbend.lens import equisolid, rectilinear, equidistant, \
     orthographic, stereographic
-from lightbend.utils import degrees_to_radians
+from photonbend.utils import degrees_to_radians
 from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning, rotation_help
 
 
@@ -106,7 +106,7 @@ def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, ot
     source_fov = _check_fov(ifov, source_type)
 
     destiny_lens = lens_types[olens]
-    destiny_type = types_dict[itype]
+    destiny_type = types_dict[otype]
     destiny_fov = _check_fov(ofov, destiny_type)
 
     try:
@@ -118,7 +118,17 @@ def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, ot
         sys.exit(1)
 
     source_sphere = SphereImage(source_array, source_type, source_fov, source_lens)
-    destiny_sphere = SphereImage(np.zeros(source_array.shape, np.core.uint8), destiny_type, destiny_fov, destiny_lens)
+
+    if (source_type is not destiny_type) and destiny_type is LensImageType.DOUBLE_INSCRIBED:
+        y, x, c = source_array.shape
+        destiny_array = np.zeros((y, x * 2, c), np.core.uint8)
+    elif (source_type is not destiny_type) and source_type is LensImageType.DOUBLE_INSCRIBED:
+        y, x, c = source_array.shape
+        destiny_array = np.zeros((y, x // 2, c), np.core.uint8)
+    else:
+        destiny_array = np.zeros(source_array.shape, np.core.uint8)
+
+    destiny_sphere = SphereImage(destiny_array, destiny_type, destiny_fov, destiny_lens)
 
     if rotation != (0, 0, 0):
         rotation_rad = list(map(degrees_to_radians, rotation))

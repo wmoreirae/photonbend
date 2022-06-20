@@ -16,7 +16,7 @@
 
 import numpy as np
 from numba import njit, float64, cfunc, bool_
-from lightbend.utils import degrees_to_radians
+from photonbend.utils import degrees_to_radians
 
 
 @cfunc(float64(float64))

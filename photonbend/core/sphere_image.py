@@ -28,7 +28,7 @@ import numpy as np
 from numba import uint8, float64, njit, prange, complex128, bool_, typeof
 from numba.experimental import jitclass
 
-from lightbend.core import LensImage
+from photonbend.core import LensImage
 
 DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]
 
@@ -90,7 +90,7 @@ class SphereImage:
         """Create a new SphereImage
 
         :param image_arr: The array representing the image.
-        :param image_type: An enum of <lightbend.core.ImageType>
+        :param image_type: An enum of <photonbend.core.ImageType>
         :param fov: The maximum Field of View of this image
         :param lens: The lens function of this sphere image
         """
@@ -155,7 +155,6 @@ class SphereImage:
         self.i_rotation_matrix = i_rot
 
     def add_rotation(self, pitch, yaw, roll):
-        # TODO change method to chain rotations instead of simply adding them together.
         """Add a new rotation to the instance's current rotation matrix.
         With this method a sphere can be rotated arbitrarily many times along its axis.
         This method does not reset the rotation. It actually updates it, adding this new rotation to the previously

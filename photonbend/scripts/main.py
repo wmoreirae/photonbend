@@ -24,7 +24,7 @@ import os
 
 @click.group()
 def main():
-    """The lightbend utility allows one to change photos and panoramas.
+    """The photonbend utility allows one to change photos and panoramas.
     It provides multiple commands to change different kinds of images.
     """
     os.environ['NUMBA_DISABLE_PERFORMANCE_WARNINGS'] = '1'

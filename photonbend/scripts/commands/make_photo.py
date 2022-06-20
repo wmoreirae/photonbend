@@ -22,11 +22,11 @@ import click
 import numpy as np
 from PIL import Image
 
-from lightbend.core.lens_image_type import LensImageType
-from lightbend.projections.equirectangular import make_sphere_image
-from lightbend.lens import equisolid, rectilinear, equidistant, \
+from photonbend.core.lens_image_type import LensImageType
+from photonbend.projections.equirectangular import make_sphere_image
+from photonbend.lens import equisolid, rectilinear, equidistant, \
     orthographic, stereographic
-from lightbend.utils import degrees_to_radians
+from photonbend.utils import degrees_to_radians
 from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning, rotation_help
 
 

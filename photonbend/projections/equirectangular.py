@@ -26,8 +26,8 @@ from typing import Tuple
 import numpy as np
 from numba import njit, prange
 
-from lightbend.core import SphereImage, LensImageType
-from lightbend.utils import degrees_to_radians
+from photonbend.core import SphereImage, LensImageType
+from photonbend.utils import degrees_to_radians
 
 
 @njit
@@ -102,7 +102,7 @@ def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: fl
     standard_parallel = np.arccos(min(1.0, source_width / 2 / source_height))
 
     # -0.1 is a dirty trick to go around rounding problems and continuous nature of geometry
-    radius = (source_height - 0.1) / np.pi
+    radius = (source_height) / np.pi
 
     destiny_height = int(round(np.pi * radius))
     destiny_width = destiny_height
@@ -126,12 +126,17 @@ def make_sphere_image(source: np.array, lens, image_type: LensImageType, fov: fl
                 x, y = _projection_function(radius, standard_parallel, longitude, latitude, False)
 
                 x = int(round(x))
+                x = x % source_width
                 y = int(round(y))
+                y = y % source_height
 
                 if x < 0 or x >= source_width:
                     continue
                 if y < 0 or y >= source_height:
                     continue
+                # x = x % destiny_width
+                # y = y % destiny_height
+
                 value = source[y, x]
                 d_sphere.set_to_cartesian(column, row, value)
             except Exception:

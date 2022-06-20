@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "lightbend"
-version = "0.1.0"
-description = "Lightbend deals with camera pictures (especially fisheye) and some projections like equirectangular"
+name = "photonbend"
+version = "0.1.1"
+description = "Photonbend allows one to convert photos between different sorts of lenses, rotate photos and make panoramas."
 authors = ["Edson Moreira <w.moreirae@gmail.com>"]
 license = "MIT"
 
@@ -17,7 +17,7 @@ click = "^8.0.4"
 pytest = "^7.0.1"
 
 [tool.poetry.scripts]
-lightbend = "lightbend.scripts.main:main"
+photonbend = "photonbend.scripts.main:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
