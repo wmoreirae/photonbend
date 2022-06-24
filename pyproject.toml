@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "photonbend"
-version = "0.1.1"
+version = "0.1.2"
 description = "Photonbend allows one to convert photos between different sorts of lenses, rotate photos and make panoramas."
 authors = ["Edson Moreira <w.moreirae@gmail.com>"]
 license = "MIT"
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8,<3.11"
@@ -22,3 +23,6 @@ photonbend = "photonbend.scripts.main:main"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[project.urls]
+"Homepage" = "https://github.com/wmoreirae/photonbend"
