@@ -133,7 +133,7 @@ def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, ot
     if rotation != (0, 0, 0):
         rotation_rad = list(map(degrees_to_radians, rotation))
         pitch, yaw, roll = rotation_rad
-        source_sphere.set_rotation(pitch, roll, yaw)
+        source_sphere.set_rotation(pitch, yaw, roll)
 
     destiny_sphere.map_from_sphere_image(source_sphere, ssample)
     destiny_arr = destiny_sphere.get_image_array()

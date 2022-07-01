@@ -106,7 +106,7 @@ def make_pano(input_image: click.Path, type: str, lens: str, fov: float, output_
     if rotation != (0, 0, 0):
         rotation_rad = list(map(degrees_to_radians, rotation))
         pitch, yaw, roll = rotation_rad
-        source_sphere.set_rotation(pitch, roll, yaw)
+        source_sphere.set_rotation(pitch, yaw, roll)
 
     width = compute_best_width(source_sphere)
 
