@@ -1,5 +1,5 @@
 # Scripts
-When installing it sets up a script with 3 different commands to help you deal with your images.
+When photonbend is installed, it sets up a script with 3 different commands to help you deal with your images.
  - [make-photo](#make-photo)
  - [alter-photo](#alter-photo)
  - [make-pano](#make-pano)
@@ -8,7 +8,7 @@ When installing it sets up a script with 3 different commands to help you deal w
 This tool allows you to make a photo out of an equirectangular panorama (2:1 aspect ration).
 
 ### Make a 360 degrees photo with an equidistant lens
-The example below creates a photo of type `inscribed`, with an `equidistant` lens, and an FoV of `360` degrees named `equidistant.jpg` from the panorama in file `./original/View_From_The_Deck_6k.jpg`
+The example below creates a photo of type `inscribed`, with an `equidistant` lens, and an FoV of `360` degrees named `equidistant.jpg` from the panorama in file `./original/View_From_The_Deck_6k.jpg`[^1]
 
 ```
 photonbend make-photo --type inscribed --lens equidistant --fov 360 ./original/View_From_The_Deck_6k.jpg equidistant.jpg
@@ -108,11 +108,11 @@ photonbend make-pano --type inscribed --lens equidistant --fov 360 --rotation -9
 
 [![Panorama](img/vftd/panorama-rotated_small.jpg)](/examples/panorama-rotated.jpg)
 
-## About the source image used on this example:
-
-Author: Bob Dass <br>
-Title: View From The Deck <br>
-Available at: https://flickr.com/photos/54144402@N03/50677156243/in/faves-195024173@N05/ <br>
-License: Creative Commons - Attribution 2.0 <br>
-[License summary here](https://creativecommons.org/licenses/by/2.0/) <br>
-[License text here](https://creativecommons.org/licenses/by/2.0/legalcode) <br>
+[^1]:
+    ### About the source image used on the examples:
+    Author: Bob Dass <br>
+    Title: View From The Deck <br>
+    Available at: https://flickr.com/photos/54144402@N03/50677156243/in/faves-195024173@N05/ <br>
+    License: Creative Commons - Attribution 2.0 <br>
+    [License summary here](https://creativecommons.org/licenses/by/2.0/) <br>
+    [License text here](https://creativecommons.org/licenses/by/2.0/legalcode) <br>
