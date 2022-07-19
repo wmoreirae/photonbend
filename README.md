@@ -18,8 +18,8 @@ Those type of images follow a scheme like the one below:
 
 ## How it works
 
-This module uses the information you provide about the image format, lenses, and FoV, couples it with mathematical functions that describes the way each kind of lens behave, and does some trigonometry to map your planar photos or panoramas to a sphere (actually, the interior wall of a sphere.
-Using a sphere as a base lets you rotate the image. Using all those functions and trigonometry, it also lets you take a virtual picture of the interior of the sphere using different lenses and FoV to produce new images. It also lets you map a sphere to an equirectangular panorama.
+This module uses the information you provide about the image format, lenses, and FoV, couples it with mathematical functions that describes the ways the lenses behave, and makes use of trigonometry to map your planar photos or panoramas to a sphere (actually, the interior wall of a sphere.
+Using a sphere as a base lets you rotate the image. Using all those functions and trigonometry, it also lets you take a virtual picture of the interior of the sphere using different sorts of lenses and FoV to produce new images. It also lets you map a sphere to an equirectangular panorama.
 
 ![Image maps](docs/img/mapping-comparison.png)
 
