@@ -15,5 +15,5 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from .lens_image_type import LensImageType
-from .lens_image import LensImage
-from .sphere_image import SphereImage
+from photonbend.core._discontinued.lens_image import LensImage
+from photonbend.core._discontinued.sphere_image import SphereImage

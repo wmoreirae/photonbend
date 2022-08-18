@@ -14,12 +14,11 @@
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from typing import Tuple, Callable
-
 import numpy as np
-from numba import njit
+
+FULL_CIRCLE = np.pi
 
 
-@njit
 def decompose(a_complex_number):
     """Decomposes a complex number into it's real and imaginary parts and returns them as integers.
     To turn the parts into integers, it rounds them first and the proceed s to cast them.
@@ -32,14 +31,12 @@ def decompose(a_complex_number):
     return x, y
 
 
-@njit
 def angle_from_vector(vector: complex):
     u_vector = unit_vector(vector)
     theta = np.log(vector).imag
     return theta
 
 
-@njit
 def vector_magnitude(vector: complex):
     """Computes the magnitude of a complex number vector
 
@@ -49,29 +46,24 @@ def vector_magnitude(vector: complex):
     return np.sqrt(vector.real ** 2 + vector.imag ** 2)
 
 
-@njit
 def degrees_to_radians(degrees: float):
     return degrees / 180 * np.pi
 
 
-@njit
 def radians_to_degrees(rad: float) -> float:
     return rad / np.pi * 180.0
 
 
-@njit
 def dpi_to_dpmm(dpi: int) -> float:
     mm_in_a_inch = 25.4
     return dpi / mm_in_a_inch
 
 
-@njit
 def vector_from_coordinates(x, y) -> complex:
     vector = complex(x, y)
     return vector
 
 
-@njit
 def unit_vector(vector: complex) -> complex:
     magnitude = vector_magnitude(vector)
     if 0 == magnitude:
@@ -80,12 +72,10 @@ def unit_vector(vector: complex) -> complex:
     return u_vector
 
 
-@njit
 def c_round(complex_number) -> Tuple[int, int]:
     return int(round(complex_number.real)), int(round(complex_number.imag))
 
 
-@njit
 def vector_to_focal_units(vector: complex, focal_distance: float, pixels_per_f_distance: float) -> float:
     """Calculates the projection of a pixel.
 
@@ -101,7 +91,6 @@ def vector_to_focal_units(vector: complex, focal_distance: float, pixels_per_f_d
     return normalized_projection_magnitude
 
 
-@njit
 def calculate_lens_angle(vector: complex, f_distance: float, dpi: float,
                          mapping_function: Callable[[float, bool], float]):
     normalized_magnitude = vector_to_focal_units(vector, f_distance, dpi)
@@ -109,7 +98,6 @@ def calculate_lens_angle(vector: complex, f_distance: float, dpi: float,
     return angle * 2
 
 
-@njit
 def calculate_pixels_per_f_distance(vector: complex, angle: float, f_distance: float,
                                     mapping_function: Callable[[float, bool], float]):
     half_angle = angle / 2
@@ -121,13 +109,12 @@ def calculate_pixels_per_f_distance(vector: complex, angle: float, f_distance: f
 
 # TODO MAKE A TRANSLATE TO GEODESIC
 
-@njit
+
 def _Z_get_360_longitude(longitude):
     new_longitude = longitude % FULL_CIRCLE
     return new_longitude
 
 
-@njit
 def _Z_get_180_longitude(longitude):
     new_longitude = longitude % FULL_CIRCLE
     if np.pi < new_longitude:
@@ -135,7 +122,6 @@ def _Z_get_180_longitude(longitude):
     return new_longitude
 
 
-@njit
 def decompose(a_complex_number):
     """Decomposes a complex number into it's real and imaginary parts and returns them as integers.
     To turn the parts into integers, it rounds them first and the proceed s to cast them.
@@ -148,7 +134,6 @@ def decompose(a_complex_number):
     return x, y
 
 
-@njit
 def weighted_sum(v1, v2, w1, w2):
     sum_weight = w1 + w2
     v1_arr = np.zeros(3, np.core.uint64)
@@ -165,6 +150,5 @@ def weighted_sum(v1, v2, w1, w2):
     return v3
 
 
-@njit
 def _2ints(v1, v2):
     return int(v1), int(v2)

@@ -30,7 +30,7 @@ import numpy as np
 from PIL import Image
 
 from photonbend.core.lens_image_type import LensImageType
-from photonbend.core.sphere_image import SphereImage
+from photonbend.core._discontinued.sphere_image import SphereImage
 from photonbend.lens import equisolid, rectilinear, equidistant, \
     orthographic, stereographic
 from photonbend.utils import degrees_to_radians
