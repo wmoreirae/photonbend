@@ -22,7 +22,7 @@ import click
 import numpy as np
 from PIL import Image
 
-from photonbend.core.lens_image_type import LensImageType
+from photonbend.core._discontinued.lens_image_type import LensImageType
 from photonbend.core._discontinued.sphere_image import SphereImage
 from photonbend.projections.equirectangular import make_projection, compute_best_width
 from photonbend.lens import equisolid, rectilinear, equidistant, \

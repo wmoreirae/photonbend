@@ -14,4 +14,22 @@
 #   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#TODO write the base class to the images here
+# TODO write the base class to the images here
+
+from typing import Protocol
+from abc import abstractmethod
+import numpy as np
+import numpy.typing as npt
+
+
+class ProjectionImage(Protocol):
+    image: np.ndarray
+
+    @abstractmethod
+    def get_polar_map(self) -> npt.NDArray[complex]:
+        ...
+
+    @abstractmethod
+    def process_coordinate_map(self, polar_map:npt.NDArray[complex]) -> npt.NDArray[np.int8]:
+        ...
+

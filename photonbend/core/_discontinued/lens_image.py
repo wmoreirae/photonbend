@@ -24,7 +24,7 @@ from numba import uint8, float64, typeof, complex128, cfunc, int64, bool_
 from numba.experimental import jitclass
 
 from photonbend.utils import vector_magnitude, decompose, weighted_sum
-from photonbend.core.lens_image_type import LensImageType
+from photonbend.core._discontinued.lens_image_type import LensImageType
 from photonbend.utils.utils import _2ints
 
 DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]

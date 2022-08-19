@@ -1,0 +1,90 @@
+#   Copyright (c) 2022. Edson Moreira
+#  #
+#   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+#   documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+#    the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+#    to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#  #
+#   The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+#   the Software.
+#  #
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+#   BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+#   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+#   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+import numpy as np
+import numpy.typing as npt
+
+from .projection_image import ProjectionImage
+from typing import Tuple, Callable, Union
+
+
+ForwardReverseLensFunction = Callable[[Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]]
+LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
+
+
+@np.vectorize
+def _make_complex(x, y):
+    return complex(x, y)
+
+
+class LensProjectionImage(ProjectionImage):
+    def __init__(self, image_arr: npt.NDArray[np.core.int8], fov: float, lens: LensFunction,
+                 magnitude: Union[None, float] = None):
+        self.image = image_arr
+        self.fov = fov
+
+        forward_lens, reverse_lens = lens
+        self.forward_lens = forward_lens
+        self.reverse_lens = reverse_lens
+
+        self.magnitude: float = (self.image.shape[0] / 2.0) if (magnitude is None) else magnitude
+        self.dpf = self._compute_dpf()
+
+    def _compute_dpf(self) -> float:
+        """
+        This method compute the dpf (dots per focal distance)
+
+        Usually only the self.init method should call this.
+
+        It computes the maximum distance the maximum angle this lens is set to produce in focal distances.
+        To simplify the calculations, we always use a focal distance of one, and make the dots per focal distance (dpf)
+        variable.
+        So, in order to calculate the dpf, we measure the maximum distance the lens produce if focal distances,
+        we calculate the longest vector of this image (from the center of the image to one of it's sides) and we
+        divide the second by the first to arrive at the dpf.  Then we set this to the current object.
+
+        :return: float
+        """
+        maximum_lens_angle = self.fov / 2
+        maximum_image_magnitude = self.magnitude
+        lens_max_angle_magnitude = self.forward_lens(maximum_lens_angle)
+        return maximum_image_magnitude / lens_max_angle_magnitude
+
+    # Protocol implementation
+    def get_polar_map(self) -> npt.NDArray[float]:
+        o_height, o_width = self.image.shape[:2]
+
+        # making of the mesh
+        x_axis_range = np.linspace(-o_width / 2 + 0.5, o_width / 2 - 0.5, num=o_width)
+        y_axis_range = np.linspace(o_height / 2 - 0.5, -o_height / 2 + 0.5, num=o_height)
+        mesh_y, mesh_x = np.meshgrid(y_axis_range, x_axis_range, sparse=True, indexing='ij')
+
+        distance_mesh = np.sqrt(mesh_x ** 2 + mesh_y ** 2) / self.dpf
+        latitude: npt.NDArray[float] = self.reverse_lens(distance_mesh)
+        longitude = np.log(_make_complex(mesh_x, mesh_y)).imag
+
+        latitude = latitude.reshape(*latitude.shape, 1)
+        longitude = longitude.reshape(*longitude.shape, 1)
+        invalid = distance_mesh > np.pi
+        invalid_float = invalid.view(np.core.float)
+        invalid_float = invalid.reshape(*invalid_float.shape, 1)
+
+        polar_coordinates = np.concatenate([latitude, longitude, invalid_float], 3)
+        return polar_coordinates
+
+    # Protocol implementation
+    def process_coordinate_map(self, polar_map: npt.NDArray[complex]) -> npt.NDArray[np.int8]:
+        pass
