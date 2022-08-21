@@ -20,12 +20,14 @@ import numpy.typing as npt
 from .projection_image import ProjectionImage
 from typing import Tuple, Callable, Union
 
+from numba import float64, complex128
+import numba as nb
 
 ForwardReverseLensFunction = Callable[[Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]]
 LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
 
-@np.vectorize
+@nb.vectorize([complex128(float64, float64)], cache=True)
 def _make_complex(x, y):
     return complex(x, y)
 
@@ -64,7 +66,7 @@ class LensProjectionImage(ProjectionImage):
         return maximum_image_magnitude / lens_max_angle_magnitude
 
     # Protocol implementation
-    def get_polar_map(self) -> npt.NDArray[float]:
+    def get_coordinate_map(self) -> npt.NDArray[float]:
         o_height, o_width = self.image.shape[:2]
 
         # making of the mesh
@@ -79,12 +81,31 @@ class LensProjectionImage(ProjectionImage):
         latitude = latitude.reshape(*latitude.shape, 1)
         longitude = longitude.reshape(*longitude.shape, 1)
         invalid = distance_mesh > np.pi
-        invalid_float = invalid.view(np.core.float)
+        print(np.any(invalid))
+        invalid_float = invalid.astype(np.core.float64)
         invalid_float = invalid.reshape(*invalid_float.shape, 1)
 
-        polar_coordinates = np.concatenate([latitude, longitude, invalid_float], 3)
+        polar_coordinates = np.concatenate([latitude, longitude, invalid_float], 2)
         return polar_coordinates
 
     # Protocol implementation
-    def process_coordinate_map(self, polar_map: npt.NDArray[complex]) -> npt.NDArray[np.int8]:
-        pass
+    def process_coordinate_map(self, coordinate_map: npt.NDArray[float]) -> npt.NDArray[np.core.int8]:
+        invalid_map = coordinate_map[:, :, 2] != 0.0
+        polar_map = coordinate_map[:, :, :2]
+
+        image_center = np.array(self.image.shape[:2]) / 2 - 0.5
+
+        # Use valid values for the calculation. Must clean up later on!
+        polar_map[invalid_map] = 0
+
+        distance = self.forward_lens(polar_map[:, :, 0]) * self.dpf
+        unbalanced_position = np.exp(polar_map[:, :, 1] * 1j) * distance
+
+        new_image_array = self.image[
+            ((unbalanced_position.imag * (-1)) + image_center[0]).astype(int),
+            (unbalanced_position.real + image_center[1]).astype(int)]
+
+        print(f'Alguma posição invalida: {np.any(invalid_map)}')
+        new_image_array[invalid_map] = 0
+
+        return new_image_array

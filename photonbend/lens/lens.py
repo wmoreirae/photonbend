@@ -15,18 +15,25 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
-from typing import Callable
+import numpy.typing as npt
+import numba as nb
+
+from typing import Callable, Union, Tuple
 from photonbend.utils import degrees_to_radians
 
+LensArgument = Union[float, npt.NDArray[float]]
+ForwardReverseLensFunction = Callable[[LensArgument], LensArgument]
+LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
-@np.vectorize
-def _rectilinear_inverse(projection_in_focal_distance_units):
+
+@nb.vectorize
+def _rectilinear_inverse(projection_in_focal_distance_units: LensArgument) -> ForwardReverseLensFunction:
     theta = np.arctan(projection_in_focal_distance_units)
     return theta
 
 
-@np.vectorize
-def _rectilinear(theta):
+@nb.vectorize
+def _rectilinear(theta: LensArgument) -> LensArgument:
     """Mapping that uses the angle tangent
 
     As it uses the angle tangent, it should not be used with lens angles closing on 180 degrees.
@@ -40,62 +47,64 @@ def _rectilinear(theta):
     return np.tan(theta)
 
 
-@np.vectorize
-def _stereographic_inverse(projection_in_focal_distance_units):
+@nb.vectorize
+def _stereographic_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     half_tan_theta = projection_in_focal_distance_units / 2
     half_theta = np.arctan(half_tan_theta)
     theta = 2 * half_theta
     return theta
 
 
-@np.vectorize
-def _stereographic(theta):
+@nb.vectorize
+def _stereographic(theta: LensArgument) -> LensArgument:
     half_theta = theta / 2
     half_projection = np.tan(half_theta)
     projection = 2 * half_projection
     return projection
 
 
-@np.vectorize
-def _equidistant_inverse(projection_in_focal_distance_units):
+@nb.vectorize
+def _equidistant_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     return projection_in_focal_distance_units
 
 
-@np.vectorize
-def _equidistant(theta):
+@nb.vectorize
+def _equidistant(theta: LensArgument) -> LensArgument:
     return theta
 
 
-@np.vectorize
-def _equisolid_inverse(projection_in_focal_distance_units):
+@nb.vectorize
+def _equisolid_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     half_sin_theta = projection_in_focal_distance_units / 2
     half_theta = np.arcsin(half_sin_theta)
     theta = 2 * half_theta
+    if np.isnan(theta):
+        return 0.0
     return theta
 
 
-@np.vectorize
-def _equisolid(theta):
+@nb.vectorize
+def _equisolid(theta: LensArgument) -> LensArgument:
     half_theta = theta / 2
     half_projection = np.sin(half_theta)
     projection = 2 * half_projection
     return projection
 
 
-@np.vectorize
-def _orthographic_inverse(projection_in_focal_distance_units):
+@nb.vectorize
+def _orthographic_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     theta = np.arcsin(projection_in_focal_distance_units)
     return theta
 
 
-@np.vectorize
-def _orthographic(theta):
+@nb.vectorize
+def _orthographic(theta: LensArgument) -> LensArgument:
     projection = np.sin(theta)
     return projection
 
 
-@np.vectorize
-def _thoby_inverse(projection_in_focal_distance_units):
+@nb.vectorize
+def _thoby_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     k1 = 1.47
     k2 = 0.713
     theta = np.arcsin(projection_in_focal_distance_units / k1) / k2
@@ -103,8 +112,8 @@ def _thoby_inverse(projection_in_focal_distance_units):
     return theta
 
 
-@np.vectorize
-def _thoby(theta):
+@nb.vectorize
+def _thoby(theta: LensArgument) -> LensArgument:
     k1 = 1.47
     k2 = 0.713
     projection = k1 * np.sin(k2 * theta)
@@ -114,37 +123,25 @@ def _thoby(theta):
 # Begin the exported functions
 
 
-def rectilinear(inverse=False) -> Callable:
-    if not inverse:
-        return _rectilinear
-    return _rectilinear_inverse
+def rectilinear() -> LensFunction:
+    return _rectilinear, _rectilinear_inverse
 
 
-def equisolid(inverse=False) -> Callable:
-    if not inverse:
-        return _equisolid
-    return _equisolid_inverse
+def equisolid() -> LensFunction:
+    return _equisolid, _equisolid_inverse
 
 
-def equidistant(inverse=False) -> Callable:
-    if not inverse:
-        return _equidistant
-    return _equidistant_inverse
+def equidistant() -> LensFunction:
+    return _equidistant, _equidistant_inverse
 
 
-def orthographic(inverse=False) -> Callable:
-    if not inverse:
-        return _orthographic
-    return _orthographic_inverse
+def orthographic() -> LensFunction:
+    return _orthographic, _orthographic_inverse
 
 
-def stereographic(inverse=False) -> Callable:
-    if not inverse:
-        return _stereographic
-    return _stereographic_inverse
+def stereographic() -> LensFunction:
+    return _stereographic, _stereographic_inverse
 
 
-def thoby(inverse=False) -> Callable:
-    if not inverse:
-        return _thoby
-    return _thoby_inverse
+def thoby() -> LensFunction:
+    return _thoby, _thoby_inverse
