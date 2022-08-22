@@ -27,7 +27,7 @@ LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
 
 @nb.vectorize
-def _rectilinear_inverse(projection_in_focal_distance_units: LensArgument) -> ForwardReverseLensFunction:
+def _rectilinear_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     theta = np.arctan(projection_in_focal_distance_units)
     return theta
 

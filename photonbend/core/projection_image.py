@@ -26,10 +26,10 @@ class ProjectionImage(Protocol):
     image: np.ndarray
 
     @abstractmethod
-    def get_coordinate_map(self) -> npt.NDArray[float]:
+    def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
         ...
 
     @abstractmethod
-    def process_coordinate_map(self, polar_map: npt.NDArray[np.core.int8]) -> npt.NDArray[np.core.int8]:
+    def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
         ...
 

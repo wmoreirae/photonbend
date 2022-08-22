@@ -66,7 +66,7 @@ class LensProjectionImage(ProjectionImage):
         return maximum_image_magnitude / lens_max_angle_magnitude
 
     # Protocol implementation
-    def get_coordinate_map(self) -> npt.NDArray[float]:
+    def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
         o_height, o_width = self.image.shape[:2]
 
         # making of the mesh
@@ -80,8 +80,8 @@ class LensProjectionImage(ProjectionImage):
 
         latitude = latitude.reshape(*latitude.shape, 1)
         longitude = longitude.reshape(*longitude.shape, 1)
-        invalid = distance_mesh > np.pi
-        print(np.any(invalid))
+        invalid = distance_mesh > self.forward_lens(self.fov / 2)
+
         invalid_float = invalid.astype(np.core.float64)
         invalid_float = invalid.reshape(*invalid_float.shape, 1)
 
@@ -89,7 +89,7 @@ class LensProjectionImage(ProjectionImage):
         return polar_coordinates
 
     # Protocol implementation
-    def process_coordinate_map(self, coordinate_map: npt.NDArray[float]) -> npt.NDArray[np.core.int8]:
+    def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
         invalid_map = coordinate_map[:, :, 2] != 0.0
         polar_map = coordinate_map[:, :, :2]
 
@@ -105,7 +105,6 @@ class LensProjectionImage(ProjectionImage):
             ((unbalanced_position.imag * (-1)) + image_center[0]).astype(int),
             (unbalanced_position.real + image_center[1]).astype(int)]
 
-        print(f'Alguma posição invalida: {np.any(invalid_map)}')
         new_image_array[invalid_map] = 0
 
         return new_image_array
