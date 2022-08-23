@@ -20,16 +20,20 @@ import numpy.typing as npt
 from .projection_image import ProjectionImage
 from typing import Tuple, Callable, Union
 
-from numba import float64, complex128
-import numba as nb
-
 ForwardReverseLensFunction = Callable[[Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]]
 LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
 
-@nb.vectorize([complex128(float64, float64)], cache=True)
+# New non-numba version
 def _make_complex(x, y):
-    return complex(x, y)
+    zx = x * 0
+    zy = y * 0
+    fx = x + zy
+    fy = y + zx
+    print(fx.shape)
+    print(fy.shape)
+    ans = np.concatenate([fx.reshape(*fx.shape, 1), fy.reshape(*fy.shape, 1)], 2).view(dtype=np.core.complex128).reshape(fx.shape[:2])
+    return ans
 
 
 class LensProjectionImage(ProjectionImage):

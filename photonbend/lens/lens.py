@@ -25,6 +25,8 @@ LensArgument = Union[float, npt.NDArray[float]]
 ForwardReverseLensFunction = Callable[[LensArgument], LensArgument]
 LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
+# TODO try to convert the numba vectorized functions into C extensions so numba can be removed from the dependencies
+
 
 @nb.vectorize
 def _rectilinear_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
