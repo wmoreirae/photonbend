@@ -30,8 +30,6 @@ def _make_complex(x, y):
     zy = y * 0
     fx = x + zy
     fy = y + zx
-    print(fx.shape)
-    print(fy.shape)
     ans = np.concatenate([fx.reshape(*fx.shape, 1), fy.reshape(*fy.shape, 1)], 2).view(dtype=np.core.complex128).reshape(fx.shape[:2])
     return ans
 

@@ -18,7 +18,7 @@ def _panorama_to_photo_size_vertical(panorama_height: int, lens_function: Callab
     f_factor = pi_f_radius / half_pi_f_radius
 
     small_side_factor = 1.0 / (1.0 - f_factor if f_factor > 0.5 else f_factor)
-    photo_diameter = int(np.ceil(panorama_height * small_side_factor))
+    photo_diameter = abs(int(np.ceil(panorama_height * small_side_factor)))
     return (photo_diameter,) * 2
 
 
@@ -27,6 +27,10 @@ def panorama_to_photo_size(panorama_size: Tuple[int, int], lens_function: Callab
     width, height = panorama_size
     assert width == 2 * height, "Equirectangular panoramas should have width and height in a 2:1 proportion"
 
+    photo_size = _panorama_to_photo_size_horizontal(width, lens_function=lens_function)
+
     if preserve_vertical:
-        return _panorama_to_photo_size_vertical(height, lens_function=lens_function)
-    return _panorama_to_photo_size_horizontal(width, lens_function=lens_function)
+        v_photo_size = _panorama_to_photo_size_vertical(height, lens_function=lens_function)
+        if v_photo_size > photo_size:
+            return v_photo_size
+    return photo_size

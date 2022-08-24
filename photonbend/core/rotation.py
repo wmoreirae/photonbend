@@ -45,7 +45,7 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
 
     return rotation_matrix
 
-
+# TODO remake this class to use a new protocol and return a rotated image
 class Rotation:
     def __init__(self):
         self.rotation_matrix = np.zeros((3, 3), np.core.float64)
