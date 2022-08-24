@@ -49,6 +49,6 @@ class PanoramaProjectionImage(ProjectionImage):
         latitude = polar_map[:, :, 0] / height_pi_segment
         longitude = polar_map[:, :, 1] / width_pi_segment + (width / 2)
 
-        image = self.image[latitude.astype(int), longitude.astype(int)]
+        image = self.image[latitude.astype(int) % height, longitude.astype(int) % width]
         image[invalid_map] = 0
         return image

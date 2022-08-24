@@ -61,24 +61,22 @@ class Rotation:
         latitude = polar_map[:, :, 0]
         longitude = polar_map[:, :, 1]
 
-        y = np.sin(latitude)
+        y = np.cos(latitude)
         xz = np.exp(longitude * 1j)
-        x = xz.real * np.cos(latitude)
-        z = xz.imag * np.cos(latitude)
+        x = xz.real * np.sin(latitude)
+        z = xz.imag * np.sin(latitude)
 
         x = np.expand_dims(x, axis=2)
         y = np.expand_dims(y, axis=2)
         z = np.expand_dims(z, axis=2)
 
         position_vector: npt.NDArray[np.core.float64] = np.concatenate([x, y, z], axis=2)
-        print(position_vector.shape)
         new_position_vector = np.apply_along_axis(self.rotation_matrix.dot, axis=2, arr=position_vector)
-        print(new_position_vector.shape)
 
-        translated_latitude = np.arcsin(new_position_vector[:, :, 1])
-        translated_xz_magnitude = np.cos(translated_latitude)
-        translated_xz = make_complex(new_position_vector[:, :, 0] / translated_xz_magnitude,
-                                     new_position_vector[:, :, 2] / translated_xz_magnitude)
+        translated_latitude = np.arccos(new_position_vector[:, :, 1])
+        translated_xz_magnitude = np.sin(translated_latitude)
+        translated_xz = make_complex(new_position_vector[:, :, 0],
+                                     new_position_vector[:, :, 2])
         translated_longitude = np.log(translated_xz).imag
 
         translated_latitude = np.expand_dims(translated_latitude, axis=2)

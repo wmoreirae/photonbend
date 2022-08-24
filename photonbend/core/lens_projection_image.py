@@ -76,7 +76,7 @@ class LensProjectionImage(ProjectionImage):
         invalid = distance_mesh > self.forward_lens(self.fov / 2)
 
         invalid_float = invalid.astype(np.core.float64)
-        invalid_float = invalid.reshape(*invalid_float.shape, 1)
+        invalid_float = np.expand_dims(invalid_float, axis=2)
 
         polar_coordinates = np.concatenate([latitude, longitude, invalid_float], 2)
         return polar_coordinates
