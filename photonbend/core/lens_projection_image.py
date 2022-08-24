@@ -18,20 +18,11 @@ import numpy as np
 import numpy.typing as npt
 
 from .projection_image import ProjectionImage
+from .utils import make_complex
 from typing import Tuple, Callable, Union
 
 ForwardReverseLensFunction = Callable[[Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]]
 LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
-
-
-# New non-numba version
-def _make_complex(x, y):
-    zx = x * 0
-    zy = y * 0
-    fx = x + zy
-    fy = y + zx
-    ans = np.concatenate([fx.reshape(*fx.shape, 1), fy.reshape(*fy.shape, 1)], 2).view(dtype=np.core.complex128).reshape(fx.shape[:2])
-    return ans
 
 
 class LensProjectionImage(ProjectionImage):
@@ -78,7 +69,7 @@ class LensProjectionImage(ProjectionImage):
 
         distance_mesh = np.sqrt(mesh_x ** 2 + mesh_y ** 2) / self.dpf
         latitude: npt.NDArray[float] = self.reverse_lens(distance_mesh)
-        longitude = np.log(_make_complex(mesh_x, mesh_y)).imag
+        longitude = np.log(make_complex(mesh_x, mesh_y)).imag
 
         latitude = latitude.reshape(*latitude.shape, 1)
         longitude = longitude.reshape(*longitude.shape, 1)

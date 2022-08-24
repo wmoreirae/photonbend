@@ -15,6 +15,9 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
+import numpy.typing as npt
+
+from photonbend.core.utils import make_complex
 
 
 def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
@@ -45,22 +48,43 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
 
     return rotation_matrix
 
-# TODO remake this class to use a new protocol and return a rotated image
+
 class Rotation:
-    def __init__(self):
-        self.rotation_matrix = np.zeros((3, 3), np.core.float64)
-        self.inverse_matrix = np.zeros((3, 3), np.core.float64)
-
-    def set_rotation(self, pitch: float, yaw: float, roll: float):
+    def __init__(self, pitch: float, yaw: float, roll: float):
         self.rotation_matrix = _calculate_rotation_matrix(pitch, yaw, roll)
-        self.inverse_matrix = _calculate_rotation_matrix(-pitch, -yaw, -roll)
 
-    def add_rotation(self, pitch: float, yaw: float, roll: float):
-        rot = _calculate_rotation_matrix(pitch, yaw, roll)
-        i_rot = _calculate_rotation_matrix(-pitch, -yaw, -roll)
-        self.rotation_matrix[:] = self.rotation_matrix @ rot
-        self.inverse_matrix[:] = self.inverse_matrix @ i_rot
+    def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
+        invalid_map = coordinate_map[:, :, 2] != 0.0
+        polar_map = coordinate_map[:, :, :2]
+        polar_map[invalid_map] = 0
 
-    def rotate_point(self, x: float, y: float, z: float):
-        # TODO
-        pass
+        latitude = polar_map[:, :, 0]
+        longitude = polar_map[:, :, 1]
+
+        y = np.sin(latitude)
+        xz = np.exp(longitude * 1j)
+        x = xz.real * np.cos(latitude)
+        z = xz.imag * np.cos(latitude)
+
+        x = np.expand_dims(x, axis=2)
+        y = np.expand_dims(y, axis=2)
+        z = np.expand_dims(z, axis=2)
+
+        position_vector: npt.NDArray[np.core.float64] = np.concatenate([x, y, z], axis=2)
+        print(position_vector.shape)
+        new_position_vector = np.apply_along_axis(self.rotation_matrix.dot, axis=2, arr=position_vector)
+        print(new_position_vector.shape)
+
+        translated_latitude = np.arcsin(new_position_vector[:, :, 1])
+        translated_xz_magnitude = np.cos(translated_latitude)
+        translated_xz = make_complex(new_position_vector[:, :, 0] / translated_xz_magnitude,
+                                     new_position_vector[:, :, 2] / translated_xz_magnitude)
+        translated_longitude = np.log(translated_xz).imag
+
+        translated_latitude = np.expand_dims(translated_latitude, axis=2)
+        translated_longitude = np.expand_dims(translated_longitude, axis=2)
+        new_invalid_map = np.expand_dims(invalid_map, axis=2)
+
+        ans = np.concatenate([translated_latitude, translated_longitude, new_invalid_map], axis=2)
+        ans[invalid_map] = 0
+        return ans

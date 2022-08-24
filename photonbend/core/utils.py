@@ -34,3 +34,12 @@ def panorama_to_photo_size(panorama_size: Tuple[int, int], lens_function: Callab
         if v_photo_size > photo_size:
             return v_photo_size
     return photo_size
+
+# New non-numba version
+def make_complex(x, y):
+    zx = x * 0
+    zy = y * 0
+    fx = x + zy
+    fy = y + zx
+    ans = np.concatenate([fx.reshape(*fx.shape, 1), fy.reshape(*fy.shape, 1)], 2).view(dtype=np.core.complex128).reshape(fx.shape[:2])
+    return ans
