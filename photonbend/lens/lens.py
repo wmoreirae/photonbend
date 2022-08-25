@@ -80,7 +80,7 @@ def _equisolid_inverse(projection_in_focal_distance_units: LensArgument) -> Lens
     half_sin_theta = projection_in_focal_distance_units / 2
     half_theta = np.arcsin(half_sin_theta)
     theta = 2 * half_theta
-    if np.isnan(theta):
+    if np.isnan(theta):  # TODO change so it is vectorized without numba
         return 0.0
     return theta
 

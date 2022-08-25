@@ -16,6 +16,7 @@ click = "^8.0.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.1"
+mypy = "^0.971"
 
 [tool.poetry.scripts]
 photonbend = "photonbend.scripts.main:main"

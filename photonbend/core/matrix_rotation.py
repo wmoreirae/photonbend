@@ -62,19 +62,19 @@ class Rotation:
         longitude = polar_map[:, :, 1]
 
         y = np.cos(latitude)
-        xz = np.exp(longitude * 1j)
-        x = xz.real * np.sin(latitude)
-        z = xz.imag * np.sin(latitude)
+        xz = np.exp(longitude * 1j) * np.sin(latitude)
+        x = xz.real
+        z = xz.imag
 
         x = np.expand_dims(x, axis=2)
         y = np.expand_dims(y, axis=2)
         z = np.expand_dims(z, axis=2)
-
         position_vector: npt.NDArray[np.core.float64] = np.concatenate([x, y, z], axis=2)
+
+        # TODO works but it is too slow
         new_position_vector = np.apply_along_axis(self.rotation_matrix.dot, axis=2, arr=position_vector)
 
         translated_latitude = np.arccos(new_position_vector[:, :, 1])
-        translated_xz_magnitude = np.sin(translated_latitude)
         translated_xz = make_complex(new_position_vector[:, :, 0],
                                      new_position_vector[:, :, 2])
         translated_longitude = np.log(translated_xz).imag

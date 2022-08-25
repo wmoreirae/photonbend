@@ -74,6 +74,7 @@ class LensProjectionImage(ProjectionImage):
         latitude = latitude.reshape(*latitude.shape, 1)
         longitude = longitude.reshape(*longitude.shape, 1)
         invalid = distance_mesh > self.forward_lens(self.fov / 2)
+        print(np.any(invalid))
 
         invalid_float = invalid.astype(np.core.float64)
         invalid_float = np.expand_dims(invalid_float, axis=2)
