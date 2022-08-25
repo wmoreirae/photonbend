@@ -16,7 +16,8 @@
 
 import numpy as np
 import numpy.typing as npt
-import numba as nb
+import warnings
+#import numba as nb
 
 from typing import Callable, Union, Tuple
 from photonbend.utils import degrees_to_radians
@@ -25,16 +26,16 @@ LensArgument = Union[float, npt.NDArray[float]]
 ForwardReverseLensFunction = Callable[[LensArgument], LensArgument]
 LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
-# TODO try to convert the numba vectorized functions into C extensions so numba can be removed from the dependencies
+# TODO check speeds to see if removing numba is plausible
 
 
-@nb.vectorize
+# @nb.vectorize
 def _rectilinear_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     theta = np.arctan(projection_in_focal_distance_units)
     return theta
 
 
-@nb.vectorize
+# @nb.vectorize
 def _rectilinear(theta: LensArgument) -> LensArgument:
     """Mapping that uses the angle tangent
 
@@ -49,7 +50,7 @@ def _rectilinear(theta: LensArgument) -> LensArgument:
     return np.tan(theta)
 
 
-@nb.vectorize
+# @nb.vectorize
 def _stereographic_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     half_tan_theta = projection_in_focal_distance_units / 2
     half_theta = np.arctan(half_tan_theta)
@@ -57,7 +58,7 @@ def _stereographic_inverse(projection_in_focal_distance_units: LensArgument) -> 
     return theta
 
 
-@nb.vectorize
+# @nb.vectorize
 def _stereographic(theta: LensArgument) -> LensArgument:
     half_theta = theta / 2
     half_projection = np.tan(half_theta)
@@ -65,27 +66,36 @@ def _stereographic(theta: LensArgument) -> LensArgument:
     return projection
 
 
-@nb.vectorize
+# @nb.vectorize
 def _equidistant_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     return projection_in_focal_distance_units
 
 
-@nb.vectorize
+# @nb.vectorize
 def _equidistant(theta: LensArgument) -> LensArgument:
     return theta
 
 
-@nb.vectorize
+# @nb.vectorize
 def _equisolid_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     half_sin_theta = projection_in_focal_distance_units / 2
-    half_theta = np.arcsin(half_sin_theta)
-    theta = 2 * half_theta
-    if np.isnan(theta):  # TODO change so it is vectorized without numba
-        return 0.0
+    with warnings.catch_warnings():
+        # ignore warnings that will be thrown because of NaNs
+        warnings.simplefilter('ignore')
+        half_theta = np.arcsin(half_sin_theta)
+        theta = 2 * half_theta
+
+    nan_values = np.isnan(theta)
+    if isinstance(theta, float):
+        if nan_values:
+            return 0.0
+        return theta
+
+    theta[nan_values] = 0.0
     return theta
 
 
-@nb.vectorize
+# @nb.vectorize
 def _equisolid(theta: LensArgument) -> LensArgument:
     half_theta = theta / 2
     half_projection = np.sin(half_theta)
@@ -93,19 +103,19 @@ def _equisolid(theta: LensArgument) -> LensArgument:
     return projection
 
 
-@nb.vectorize
+# @nb.vectorize
 def _orthographic_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     theta = np.arcsin(projection_in_focal_distance_units)
     return theta
 
 
-@nb.vectorize
+# @nb.vectorize
 def _orthographic(theta: LensArgument) -> LensArgument:
     projection = np.sin(theta)
     return projection
 
 
-@nb.vectorize
+# @nb.vectorize
 def _thoby_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
     k1 = 1.47
     k2 = 0.713
@@ -114,7 +124,7 @@ def _thoby_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgu
     return theta
 
 
-@nb.vectorize
+# @nb.vectorize
 def _thoby(theta: LensArgument) -> LensArgument:
     k1 = 1.47
     k2 = 0.713

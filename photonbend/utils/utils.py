@@ -107,8 +107,6 @@ def calculate_pixels_per_f_distance(vector: complex, angle: float, f_distance: f
     return pixels_pfd
 
 
-# TODO MAKE A TRANSLATE TO GEODESIC
-
 
 def _Z_get_360_longitude(longitude):
     new_longitude = longitude % FULL_CIRCLE
