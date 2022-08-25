@@ -50,30 +50,41 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
 
 
 class Rotation:
+    """
+    Does the rotation of coordinate maps
+    """
     def __init__(self, pitch: float, yaw: float, roll: float):
         self.rotation_matrix = _calculate_rotation_matrix(pitch, yaw, roll)
 
-    def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
-        invalid_map = coordinate_map[:, :, 2] != 0.0
+    def rotate_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
+        # Create views the various elements of the coordinate map into components
         polar_map = coordinate_map[:, :, :2]
-        polar_map[invalid_map] = 0
-
         latitude = polar_map[:, :, 0]
         longitude = polar_map[:, :, 1]
 
+        # Create an invalid selector so we can do some clean up
+        invalid_map = coordinate_map[:, :, 2] != 0.0
+        polar_map[invalid_map] = 0
+
+        # Convert the polar coordinate map into 3 maps representing 3D coordinates (x, y, z)
         y = np.cos(latitude)
         xz = np.exp(longitude * 1j) * np.sin(latitude)
         x = xz.real
         z = xz.imag
 
+        # Concatenate the elements to produce a single map
         x = np.expand_dims(x, axis=2)
         y = np.expand_dims(y, axis=2)
         z = np.expand_dims(z, axis=2)
         position_vector: npt.NDArray[np.core.float64] = np.concatenate([x, y, z], axis=2)
+        # Expands the dimensions of the map so that it can go through fast matrix multiplication
+        position_vector = np.expand_dims(position_vector, axis=3)
 
-        # TODO works but it is too slow
-        new_position_vector = np.apply_along_axis(self.rotation_matrix.dot, axis=2, arr=position_vector)
+        # Does the rotation using matrix multiplication in the last two axis of both matrices, which works really fast
+        new_position_vector = np.matmul(self.rotation_matrix, position_vector, axes=[(-2, -1), (-2, -1,), (-2, -1,)])
+        new_position_vector = new_position_vector.reshape(new_position_vector.shape[:-1])
 
+        # Turn the 3D map back into a polar coordinate map
         translated_latitude = np.arccos(new_position_vector[:, :, 1])
         translated_xz = make_complex(new_position_vector[:, :, 0],
                                      new_position_vector[:, :, 2])
@@ -83,6 +94,10 @@ class Rotation:
         translated_longitude = np.expand_dims(translated_longitude, axis=2)
         new_invalid_map = np.expand_dims(invalid_map, axis=2)
 
-        ans = np.concatenate([translated_latitude, translated_longitude, new_invalid_map], axis=2)
-        ans[invalid_map] = 0
+        pre_ans = np.concatenate([translated_latitude, translated_longitude], axis=2)
+        # cleans the data before returning to ensure all other functions will work
+        pre_ans[invalid_map] = 0
+
+        # concatenate the invalid map to the back of pre_ans to complete the data
+        ans = np.concatenate([pre_ans, new_invalid_map], axis=2)
         return ans
