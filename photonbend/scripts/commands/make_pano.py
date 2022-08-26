@@ -27,7 +27,7 @@ from photonbend.core._discontinued.sphere_image import SphereImage
 from photonbend.projections.equirectangular import make_projection, compute_best_width
 from photonbend.lens import equisolid, rectilinear, equidistant, \
     orthographic, stereographic
-from photonbend.utils import degrees_to_radians
+from photonbend.utils import to_radians
 from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning, rotation_help
 
 
@@ -36,7 +36,7 @@ def _check_fov(fov: float, image_type: LensImageType):
         raise ValueError("The fov of a double image can't be smaller than 180 degrees.")
     if fov > 360:
         raise ValueError("The fov of an image can't be higher than 360 degrees.")
-    r_fov = degrees_to_radians(fov)
+    r_fov = to_radians(fov)
     return r_fov
 
 
@@ -104,7 +104,7 @@ def make_pano(input_image: click.Path, type: str, lens: str, fov: float, output_
     source_sphere = SphereImage(source_array, source_type, source_fov, source_lens)
 
     if rotation != (0, 0, 0):
-        rotation_rad = list(map(degrees_to_radians, rotation))
+        rotation_rad = list(map(to_radians, rotation))
         pitch, yaw, roll = rotation_rad
         source_sphere.set_rotation(pitch, yaw, roll)
 

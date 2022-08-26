@@ -26,7 +26,7 @@ from photonbend.core._discontinued.lens_image_type import LensImageType
 from photonbend.projections.equirectangular import make_sphere_image
 from photonbend.lens import equisolid, rectilinear, equidistant, \
     orthographic, stereographic
-from photonbend.utils import degrees_to_radians
+from photonbend.utils import to_radians
 from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning, rotation_help
 
 
@@ -35,7 +35,7 @@ def _check_fov(fov: float, image_type: LensImageType):
         raise ValueError("The fov of a double image can't be smaller than 180 degrees.")
     if fov > 360:
         raise ValueError("The fov of an image can't be higher than 360 degrees.")
-    r_fov = degrees_to_radians(fov)
+    r_fov = to_radians(fov)
     return r_fov
 
 

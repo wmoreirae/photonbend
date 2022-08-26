@@ -17,7 +17,7 @@
 import numpy as np
 import numpy.typing as npt
 
-from .projection_image import ProjectionImage
+from photonbend.core.protocols._projection_image import ProjectionImage
 from .utils import make_complex
 from typing import Tuple, Callable, Union
 

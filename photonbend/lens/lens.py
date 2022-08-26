@@ -20,7 +20,7 @@ import warnings
 #import numba as nb
 
 from typing import Callable, Union, Tuple
-from photonbend.utils import degrees_to_radians
+from photonbend.utils import to_radians
 
 LensArgument = Union[float, npt.NDArray[float]]
 ForwardReverseLensFunction = Callable[[LensArgument], LensArgument]
@@ -45,7 +45,7 @@ def _rectilinear(theta: LensArgument) -> LensArgument:
     """
     if theta < 0:
         raise ValueError('The angle theta cannot be negative')
-    if theta > degrees_to_radians(89):
+    if theta > to_radians(89):
         raise ValueError('The rectilinear function was not made to handle FOV larger than 179 degrees')
     return np.tan(theta)
 

@@ -14,6 +14,7 @@
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from photonbend.core._discontinued.lens_image_type import LensImageType
-from photonbend.core._discontinued.lens_image import LensImage
-from photonbend.core._discontinued.sphere_image import SphereImage
+from ._lens_projection_image import LensProjectionImage
+from ._panorama_projection_image import PanoramaProjectionImage
+from .protocols import ProjectionImage
+from ._rotation import Rotation

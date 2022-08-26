@@ -16,7 +16,7 @@
 import numpy as np
 from numpy import typing as npt
 
-from .projection_image import ProjectionImage
+from photonbend.core.protocols._projection_image import ProjectionImage
 
 
 class PanoramaProjectionImage(ProjectionImage):
