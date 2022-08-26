@@ -18,7 +18,7 @@ import numpy as np
 import numpy.typing as npt
 
 from photonbend.core.protocols._projection_image import ProjectionImage
-from .utils import make_complex
+from ._shared import make_complex
 from typing import Tuple, Callable, Union
 
 ForwardReverseLensFunction = Callable[[Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]]
