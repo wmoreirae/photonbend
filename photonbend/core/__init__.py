@@ -16,5 +16,6 @@
 
 from ._lens_projection_image import LensProjectionImage
 from ._panorama_projection_image import PanoramaProjectionImage
+from ._mapping_image import make_mapping_map
 from ._rotation import Rotation
 from .protocols import ProjectionImage

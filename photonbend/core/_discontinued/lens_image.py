@@ -25,7 +25,7 @@ from numba.experimental import jitclass
 
 from photonbend.utils import vector_magnitude, decompose, weighted_sum
 from photonbend.core._discontinued.lens_image_type import LensImageType
-from photonbend.utils.utils import _2ints
+from photonbend.utils._utils import _2ints
 
 DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]
 FULL_CIRCLE = (np.pi * 2)
