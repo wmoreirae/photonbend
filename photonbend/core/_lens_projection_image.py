@@ -26,8 +26,47 @@ LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
 
 class LensProjectionImage(ProjectionImage):
+    """Store and process camera-based images and their coordinates
+
+    This class maps each pixel of an image to a polar coordinates of the
+    form (latitude, longitude) based on its attributes.
+    It can handle images that follow the principles of camera-based
+    imagery.
+
+    Attributes:
+        image: The image as a (height, width, 3) numpy array.
+        fov: The image Field of View in radians.
+        forward_lens: The lens function of this image.
+        reverse_lens: The inverse of this image's lens function.
+        magnitude: The distance in pixels from the center of the image
+            where the maximum FoV is reached.
+        dpf: The focal distance of this image in pixels.
+
+    """
+
     def __init__(self, image_arr: npt.NDArray[np.core.int8], fov: float, lens: LensFunction,
                  magnitude: Union[None, float] = None):
+        """Initializes instance attributes
+        Args:
+            image_arr: A numpy array of int8 representing an RGB image.
+                The image follows the shape (height, width, 3).
+            fov (float): Thehe Field of View in radians.
+            lens: A tuple of Callables representing a lens function and
+                its inverse.
+            magnitude: The distance in pixels from the center of the image
+                where the maximum FoV is reached.
+                For the default case of an inscribed circle image, this
+                value is calculated automatically, therefore it should
+                only be used when passing an image that is not an
+                inscribed circle.
+
+                Examples:
+                    For the inscribed image, it is the image width or
+                        height divided by 2.
+                    For the full canvas image, it is the distance in
+                        pixels of the image center to one of its
+                        corners.
+        """
         self.image = image_arr
         self.fov = fov
 
@@ -41,6 +80,8 @@ class LensProjectionImage(ProjectionImage):
     def _compute_dpf(self) -> float:
         """
         This method compute the dpf (dots per focal distance)
+
+        THIS IS NOT PART OF THE API - USE AT YOUR OWN RISK
 
         Usually only the self.init method should call this.
 
@@ -60,6 +101,16 @@ class LensProjectionImage(ProjectionImage):
 
     # Protocol implementation
     def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
+        """Returns this image coordinate map
+
+        Returns a coordinate map for this image based on its size, fov,
+        lens function and magnitude.
+        For more information on coordinate maps check the documentation
+        for the photonbend.core module.
+
+        Returns:
+            A numpy array of float64 as a coordinate map.
+        """
         o_height, o_width = self.image.shape[:2]
 
         # making of the mesh
@@ -83,6 +134,21 @@ class LensProjectionImage(ProjectionImage):
 
     # Protocol implementation
     def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
+        """Produces a new image based on a coordinate maps
+
+        Process a given coordinate maps a maps each of its coordinates
+        to a pixel on this instance image, producing a new image.
+        For more information on coordinate maps, check the documentation
+        for the photonbend.core module.
+
+        Args:
+            coordinate_map: A numpy array of float64 as a coordinate
+                map.
+        Returns:
+            A new image based on the pixel data of this instance and the
+                given coordinate map.
+        """
+
         invalid_map = coordinate_map[:, :, 2] != 0.0
         polar_map = coordinate_map[:, :, :2]
 

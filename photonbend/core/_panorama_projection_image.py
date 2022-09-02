@@ -20,10 +20,38 @@ from photonbend.core.protocols._projection_image import ProjectionImage
 
 
 class PanoramaProjectionImage(ProjectionImage):
+    """Store 'n process equirectangular panorama images and their coordinates
+
+        This class maps each pixel of an image to a polar coordinates of the
+        form (latitude, longitude) based on its size.
+        It can handle equirectangular panoramas (images with a 2:1
+        width to height ration).
+
+        Attributes:
+            image: The image as a (height, width, 3) numpy array.
+    """
+
     def __init__(self, image_arr: npt.NDArray[np.core.int8]):
+        """Initializes instance attributes
+
+        Args:
+            image_arr: A numpy array of shape (height, width, 3), where
+                height is equal to half the width.
+        """
         self.image = image_arr
 
     def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
+        """Returns this image coordinate map
+
+        Returns a coordinate map for this image based solely on its
+        size.
+        For more information on coordinate maps check the documentation
+        for the photonbend.core module.
+
+        Returns:
+            A numpy array of float64 as a coordinate map.
+        """
+
         height, width = self.image.shape[:2]
         half_pi_element = np.pi / width / 2
 
@@ -37,6 +65,20 @@ class PanoramaProjectionImage(ProjectionImage):
         return coordinate_map
 
     def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.int8]) -> npt.NDArray[np.core.int8]:
+        """Produces a new image based on a coordinate maps
+
+        Process a given coordinate maps a maps each of its coordinates
+        to a pixel on this instance image, producing a new image.
+        For more information on coordinate maps, check the documentation
+        for the photonbend.core module.
+
+        Args:
+            coordinate_map: A numpy array of float64 as a coordinate
+                map.
+        Returns:
+            A new image based on the pixel data of this instance and the
+                given coordinate map.
+        """
         invalid_map = coordinate_map[:, :, 2] != 0.0
         polar_map = coordinate_map[:, :, :2]
 
