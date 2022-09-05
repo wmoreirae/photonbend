@@ -32,7 +32,7 @@ from photonbend.core import LensImage
 
 DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]
 
-FULL_CIRCLE = (np.pi * 2)
+FULL_CIRCLE = np.pi * 2
 
 
 @njit
@@ -50,15 +50,21 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
     # TODO unwind the matrices and wind them up with array methods so they are contiguous
     cos_pitch = np.cos(pitch)
     sin_pitch = np.sin(pitch)
-    pitch_matrix = np.array((1, 0, 0, 0, cos_pitch, sin_pitch, 0, -sin_pitch, cos_pitch)).reshape((3, 3))
+    pitch_matrix = np.array(
+        (1, 0, 0, 0, cos_pitch, sin_pitch, 0, -sin_pitch, cos_pitch)
+    ).reshape((3, 3))
 
     cos_yaw = np.cos(yaw)
     sin_yaw = np.sin(yaw)
-    yaw_matrix = np.array((cos_yaw, 0, -sin_yaw, 0, 1, 0, sin_yaw, 0, cos_yaw)).reshape((3, 3))
+    yaw_matrix = np.array((cos_yaw, 0, -sin_yaw, 0, 1, 0, sin_yaw, 0, cos_yaw)).reshape(
+        (3, 3)
+    )
 
     cos_roll = np.cos(roll)
     sin_roll = np.sin(roll)
-    roll_matrix = np.array((cos_roll, sin_roll, 0, -sin_roll, cos_roll, 0, 0, 0, 1)).reshape((3, 3))
+    roll_matrix = np.array(
+        (cos_roll, sin_roll, 0, -sin_roll, cos_roll, 0, 0, 0, 1)
+    ).reshape((3, 3))
 
     rotation_matrix = pitch_matrix @ yaw_matrix @ roll_matrix
 
@@ -67,13 +73,13 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
 
 # Needed for using numba jitclass
 sphere_image_spec = [
-    ('north_pole', complex128),
-    ('south_pole', complex128),
-    ('fov', float64),
-    ('dpf', float64),
-    ('rotated', bool_),
-    ('rotation_matrix', float64[:, :]),
-    ('i_rotation_matrix', float64[:, :]),
+    ("north_pole", complex128),
+    ("south_pole", complex128),
+    ("fov", float64),
+    ("dpf", float64),
+    ("rotated", bool_),
+    ("rotation_matrix", float64[:, :]),
+    ("i_rotation_matrix", float64[:, :]),
 ]
 
 
@@ -100,8 +106,10 @@ class SphereImage:
         self.i_rotation_matrix = np.zeros((3, 3), np.core.float64)
         self.set_rotation(0.0, 0.0, 0.0)
 
-    def _get_rotated_spherical_coordinates(self, latitude: float, longitude: float, inverse: bool = False):
-        """ Translate coordinates using the instance rotation matrix
+    def _get_rotated_spherical_coordinates(
+        self, latitude: float, longitude: float, inverse: bool = False
+    ):
+        """Translate coordinates using the instance rotation matrix
 
         :param latitude: The original latitude in radians as a float
         :param longitude: The original longitude in radians as a float
@@ -127,8 +135,10 @@ class SphereImage:
 
         translated_latitude = np.arcsin(new_position_vector[1])
         translated_xz_magnitude = np.cos(translated_latitude)
-        translated_xz = complex(new_position_vector[0] / translated_xz_magnitude,
-                                new_position_vector[2] / translated_xz_magnitude)
+        translated_xz = complex(
+            new_position_vector[0] / translated_xz_magnitude,
+            new_position_vector[2] / translated_xz_magnitude,
+        )
         translated_longitude = np.log(translated_xz).imag
 
         return translated_latitude, translated_longitude
@@ -176,7 +186,7 @@ class SphereImage:
         self.i_rotation_matrix[:] = self.i_rotation_matrix @ i_rot
 
     def get_image_array(self):
-        """ Returns a copy of the underlying image matrix
+        """Returns a copy of the underlying image matrix
         :return: A copy of the image array
         """
         return self.lens_image.get_image_array()
@@ -199,7 +209,7 @@ class SphereImage:
         return True
 
     def get_from_cartesian(self, x: int, y: int) -> uint8[:]:
-        """ Get the value represented on the cartesian position x, y of this image
+        """Get the value represented on the cartesian position x, y of this image
 
         :param x: The horizontal position of the desired value
         :param y: The vertical position of the desired value
@@ -208,7 +218,7 @@ class SphereImage:
         return self.lens_image.get_from_cartesian(x, y)
 
     def set_to_cartesian(self, x: int, y: int, value: uint8[:]) -> None:
-        """ Get the value represented on the cartesian position x, y of this image
+        """Get the value represented on the cartesian position x, y of this image
 
         :param value:
         :param x: The horizontal position of the desired value
@@ -226,10 +236,14 @@ class SphereImage:
         :return: a triplet of values of type uint8
         """
 
-        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(latitude, longitude, True)
+        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(
+            latitude, longitude, True
+        )
         return self.lens_image.get_from_spherical(r_latitude, r_longitude)
 
-    def set_to_spherical(self, latitude: float, longitude: float, data: uint8[:]) -> None:
+    def set_to_spherical(
+        self, latitude: float, longitude: float, data: uint8[:]
+    ) -> None:
         """Sets the value at the given latitude and longitude to the value present on data
 
         :param latitude: The latitude of the value to set
@@ -237,10 +251,14 @@ class SphereImage:
         :param data: The value that should be set
         :return: None
         """
-        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(latitude, longitude, True)
+        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(
+            latitude, longitude, True
+        )
         self.lens_image.set_to_spherical(r_latitude, r_longitude, data)
 
-    def translate_spherical_to_cartesian(self, latitude: float, longitude: float) -> DoubleCardinal:
+    def translate_spherical_to_cartesian(
+        self, latitude: float, longitude: float
+    ) -> DoubleCardinal:
         """Translate spherical coordinates to cartesian coordinates of the image
 
         :param latitude: The latitude of the location to be translated
@@ -250,12 +268,18 @@ class SphereImage:
         if not (-np.pi / 2) <= latitude <= (np.pi / 2):
             raise ValueError("latitude should be between pi/2 and -pi/2")
 
-        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(latitude, longitude, True)
-        xy1, xy2 = self.lens_image.translate_spherical_to_cartesian(r_latitude, r_longitude)
+        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(
+            latitude, longitude, True
+        )
+        xy1, xy2 = self.lens_image.translate_spherical_to_cartesian(
+            r_latitude, r_longitude
+        )
 
         return xy1, xy2
 
-    def translate_cartesian_to_spherical(self, x: float, y: float) -> Tuple[float, float]:
+    def translate_cartesian_to_spherical(
+        self, x: float, y: float
+    ) -> Tuple[float, float]:
         """Translate cartesian coordinates to spherical coordinates of the image
 
         :param x: The horizontal coordinate
@@ -263,12 +287,14 @@ class SphereImage:
         :return: The spherical coordinates representing that location
         """
         latitude, longitude = self.lens_image.translate_cartesian_to_spherical(x, y)
-        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(latitude, longitude)
+        r_latitude, r_longitude = self._get_rotated_spherical_coordinates(
+            latitude, longitude
+        )
 
         return r_latitude, r_longitude
 
     def map_from_sphere_image(self, target_image, super_sampler: int) -> None:
-        """ Maps one spherical image to another, enabling conversion between different lenses, FoVs and target.
+        """Maps one spherical image to another, enabling conversion between different lenses, FoVs and target.
 
         The current sphere image will receive the data from the target sphere image. However it won't just copy it.
         The information will be translated to this sphere using their angular data and other specs, like its lens and
@@ -286,7 +312,9 @@ class SphereImage:
 
 
 @njit(parallel=True)
-def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereImage, super_sampler: int):
+def _helper_map_from_sphere_image(
+    this_image: SphereImage, that_image: SphereImage, super_sampler: int
+):
     height, width = this_image.lens_image.shape[:2]
 
     # SUPER SAMPLING DATA
@@ -301,24 +329,34 @@ def _helper_map_from_sphere_image(this_image: SphereImage, that_image: SphereIma
                     lat, lon = this_image.translate_cartesian_to_spherical(column, row)
                 except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
                     continue
-                this_image.set_to_cartesian(column, row, that_image.get_from_spherical(lat, lon))
+                this_image.set_to_cartesian(
+                    column, row, that_image.get_from_spherical(lat, lon)
+                )
 
             else:
                 # super sampling
-                super_sample_matrix = np.zeros((super_sampler, super_sampler, 3), np.core.uint8)
+                super_sample_matrix = np.zeros(
+                    (super_sampler, super_sampler, 3), np.core.uint8
+                )
                 for ss_row in prange(super_sampler):
                     for ss_column in prange(super_sampler):
-                        ss_position = (complex(ss_column, ss_row) - ss_matrix_center_pixel) * ss_subpixel_distance
+                        ss_position = (
+                            complex(ss_column, ss_row) - ss_matrix_center_pixel
+                        ) * ss_subpixel_distance
 
                         position_destiny = complex(column, row) + ss_position
                         a_column = position_destiny.real
                         a_row = position_destiny.imag
                         try:
-                            lat, lon = this_image.translate_cartesian_to_spherical(a_column, a_row)
+                            lat, lon = this_image.translate_cartesian_to_spherical(
+                                a_column, a_row
+                            )
                         except Exception:  # Because of Numba's njit Exception limitation, that's all we currently use
                             continue
 
-                        super_sample_matrix[ss_row, ss_column, :] = that_image.get_from_spherical(lat, lon)
+                        super_sample_matrix[
+                            ss_row, ss_column, :
+                        ] = that_image.get_from_spherical(lat, lon)
 
                 # Calculate the pixel mean and assign it!
                 ss_mean = np.zeros(3, np.core.uint8)

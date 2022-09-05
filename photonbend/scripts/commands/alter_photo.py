@@ -31,10 +31,21 @@ from PIL import Image
 
 from photonbend.core._discontinued.lens_image_type import LensImageType
 from photonbend.core._discontinued.sphere_image import SphereImage
-from photonbend.lens import equisolid, rectilinear, equidistant, \
-    orthographic, stereographic
+from photonbend.lens import (
+    equisolid,
+    rectilinear,
+    equidistant,
+    orthographic,
+    stereographic,
+)
 from photonbend.utils import to_radians
-from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning, rotation_help
+from .shared import (
+    lens_choices,
+    type_choices,
+    type_choices_help,
+    double_type_fov_warning,
+    rotation_help,
+)
 
 
 def _check_fov(fov: float, image_type: LensImageType):
@@ -48,40 +59,91 @@ def _check_fov(fov: float, image_type: LensImageType):
 
 def check_output(output: Path):
     out = Path(output)
-    if not (out.suffix.lower() in ['.jpg', '.jpeg', '.png']):
+    if not (out.suffix.lower() in [".jpg", ".jpeg", ".png"]):
         print("The desired output image should be a JPG or PNG file.")
-        print("Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)")
+        print(
+            "Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)"
+        )
         print("Exiting!")
         sys.exit(1)
     if out.exists():
         while True:
             ans = input("File already exists. Overwrite? (y/n) ")
-            if ans in ['y', 'n']:
+            if ans in ["y", "n"]:
                 break
-        if ans == 'n':
-            print('Exiting!')
+        if ans == "n":
+            print("Exiting!")
             sys.exit(0)
     return out
 
 
-@click.argument('input_image', type=click.Path(exists=True))
-@click.option('--itype', required=True, help='The type of the input image. ' + type_choices_help,
-              type=type_choices)
-@click.option('--ilens', required=True, help='The lens type that was used on the input photo.',
-              type=lens_choices)
-@click.option('--ifov', required=True, type=click.FLOAT,
-              help='The lens field of view of the input photo in degrees. ' + double_type_fov_warning)
-@click.option('--otype', required=True, help='The type of the output image.' + type_choices_help,
-              type=type_choices)
-@click.option('--olens', required=True,
-              help='The lens type that was used on the input photo. ' + double_type_fov_warning,
-              type=lens_choices)
-@click.option('--ofov', required=True, type=click.FLOAT, help='The lens field of view of the output photo in degrees.')
-@click.option('--ssample', required=False, type=click.INT, help='The ammount of supersampling applied (ss²)', default=1)
-@click.argument('output_image', type=click.Path(exists=False))
-@click.option('-r', '--rotation', required=False, type=click.FLOAT, nargs=3, default=(0, 0, 0), help=rotation_help)
-def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, otype: str, olens: str, ofov: float,
-                output_image: click.Path, ssample: int, rotation: Tuple[float, float, float]) -> None:
+@click.argument("input_image", type=click.Path(exists=True))
+@click.option(
+    "--itype",
+    required=True,
+    help="The type of the input image. " + type_choices_help,
+    type=type_choices,
+)
+@click.option(
+    "--ilens",
+    required=True,
+    help="The lens type that was used on the input photo.",
+    type=lens_choices,
+)
+@click.option(
+    "--ifov",
+    required=True,
+    type=click.FLOAT,
+    help="The lens field of view of the input photo in degrees. "
+    + double_type_fov_warning,
+)
+@click.option(
+    "--otype",
+    required=True,
+    help="The type of the output image." + type_choices_help,
+    type=type_choices,
+)
+@click.option(
+    "--olens",
+    required=True,
+    help="The lens type that was used on the input photo. " + double_type_fov_warning,
+    type=lens_choices,
+)
+@click.option(
+    "--ofov",
+    required=True,
+    type=click.FLOAT,
+    help="The lens field of view of the output photo in degrees.",
+)
+@click.option(
+    "--ssample",
+    required=False,
+    type=click.INT,
+    help="The ammount of supersampling applied (ss²)",
+    default=1,
+)
+@click.argument("output_image", type=click.Path(exists=False))
+@click.option(
+    "-r",
+    "--rotation",
+    required=False,
+    type=click.FLOAT,
+    nargs=3,
+    default=(0, 0, 0),
+    help=rotation_help,
+)
+def alter_photo(
+    input_image: click.Path,
+    itype: str,
+    ilens: str,
+    ifov: float,
+    otype: str,
+    olens: str,
+    ofov: float,
+    output_image: click.Path,
+    ssample: int,
+    rotation: Tuple[float, float, float],
+) -> None:
     """Change the the lens and FoV of a photo.
 
     \b
@@ -90,16 +152,20 @@ def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, ot
     """
     out = check_output(output_image)
 
-    types_dict = {'inscribed': LensImageType.INSCRIBED,
-                  'double': LensImageType.DOUBLE_INSCRIBED,
-                  'cropped': LensImageType.CROPPED_CIRCLE,
-                  'full': LensImageType.FULL_FRAME}
+    types_dict = {
+        "inscribed": LensImageType.INSCRIBED,
+        "double": LensImageType.DOUBLE_INSCRIBED,
+        "cropped": LensImageType.CROPPED_CIRCLE,
+        "full": LensImageType.FULL_FRAME,
+    }
 
-    lens_types = {'equidistant': equidistant,
-                  'equisolid': equisolid,
-                  'orthographic': orthographic,
-                  'rectilinear': rectilinear,
-                  'stereographic': stereographic}
+    lens_types = {
+        "equidistant": equidistant,
+        "equisolid": equisolid,
+        "orthographic": orthographic,
+        "rectilinear": rectilinear,
+        "stereographic": stereographic,
+    }
 
     source_lens = lens_types[ilens]
     source_type = types_dict[itype]
@@ -113,16 +179,20 @@ def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, ot
         with Image.open(input_image) as image:
             source_array = np.asarray(image)
     except IOError:
-        print('Error: Input image could not be opened!')
-        print('Exiting!')
+        print("Error: Input image could not be opened!")
+        print("Exiting!")
         sys.exit(1)
 
     source_sphere = SphereImage(source_array, source_type, source_fov, source_lens)
 
-    if (source_type is not destiny_type) and destiny_type is LensImageType.DOUBLE_INSCRIBED:
+    if (
+        source_type is not destiny_type
+    ) and destiny_type is LensImageType.DOUBLE_INSCRIBED:
         y, x, c = source_array.shape
         destiny_array = np.zeros((y, x * 2, c), np.core.uint8)
-    elif (source_type is not destiny_type) and source_type is LensImageType.DOUBLE_INSCRIBED:
+    elif (
+        source_type is not destiny_type
+    ) and source_type is LensImageType.DOUBLE_INSCRIBED:
         y, x, c = source_array.shape
         destiny_array = np.zeros((y, x // 2, c), np.core.uint8)
     else:
@@ -142,6 +212,6 @@ def alter_photo(input_image: click.Path, itype: str, ilens: str, ifov: float, ot
     try:
         destiny_image.save(output_image)
     except IOError:
-        print('Could not save to the specified location!')
-        print('Exiting!')
+        print("Could not save to the specified location!")
+        print("Exiting!")
         sys.exit(1)

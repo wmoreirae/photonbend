@@ -1,18 +1,25 @@
-#  Copyright (c) 2022. Edson Moreira
+
+
+#   Copyright (c) 2022. Edson Moreira
 #
-#  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-#  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
-#  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
-#  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
 #
-#  The above copyright notice and this permission notice shall be included in all copies or substantial portions
-#  of the Software.
+#   The above copyright notice and this permission notice shall be included in
+#   all copies or substantial portions of the Software.
 #
-#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-#  BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-#  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-#  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -46,7 +53,9 @@ class Lens:
 
 
 # @nb.vectorize
-def _rectilinear_inverse(projection_in_focal_distance_units: LensArgument) -> LensArgument:
+def _rectilinear_inverse(
+    projection_in_focal_distance_units: LensArgument,
+) -> LensArgument:
     theta = np.arctan(projection_in_focal_distance_units)
     return theta
 
@@ -55,18 +64,21 @@ def _rectilinear_inverse(projection_in_focal_distance_units: LensArgument) -> Le
 def _rectilinear(theta: LensArgument) -> LensArgument:
     """Mapping that uses the angle tangent
 
-    As it uses the angle tangent, it should not be used with lens angles closing on 180 degrees.
-    It is best to limit its use to lens angles of at most 165 degrees.
-    As the angle presented is halved, it should not see a theta angle larger than 82.5 degrees.
+    As it uses the angle tangent, it should not be used with lens angles closing on 180
+    degrees. It is best to limit its use to lens angles of at most 165 degrees.
+    As the angle presented is halved, it should not see a theta angle larger than 82.5
+    degrees.
 
     Args:
         theta:
 
     """
     if theta < 0:
-        raise ValueError('The angle theta cannot be negative')
+        raise ValueError("The angle theta cannot be negative")
     if theta > to_radians(89):
-        raise ValueError('The rectilinear function was not made to handle FOV larger than 179 degrees')
+        raise ValueError(
+            "The rectilinear function was not made to handle FOV larger than 179 degrees"
+        )
     return np.tan(theta)
 
 
@@ -174,7 +186,7 @@ def _equisolid_inverse(projection_in_f_units: LensArgument) -> LensArgument:
     half_sin_theta = projection_in_f_units / 2
     with warnings.catch_warnings():
         # ignore warnings that will be thrown because of NaNs
-        warnings.simplefilter('ignore')
+        warnings.simplefilter("ignore")
         half_theta = np.arcsin(half_sin_theta)
         theta = 2 * half_theta
 
@@ -336,4 +348,12 @@ def thoby() -> Lens:
     return Lens(_thoby, _thoby_inverse)
 
 
-__all__ = [Lens, equisolid, equidistant, rectilinear, stereographic, orthographic, thoby]
+__all__ = [
+    Lens,
+    equisolid,
+    equidistant,
+    rectilinear,
+    stereographic,
+    orthographic,
+    thoby,
+]

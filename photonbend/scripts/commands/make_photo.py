@@ -24,10 +24,21 @@ from PIL import Image
 
 from photonbend.core._discontinued.lens_image_type import LensImageType
 from photonbend.projections.equirectangular import make_sphere_image
-from photonbend.lens import equisolid, rectilinear, equidistant, \
-    orthographic, stereographic
+from photonbend.lens import (
+    equisolid,
+    rectilinear,
+    equidistant,
+    orthographic,
+    stereographic,
+)
 from photonbend.utils import to_radians
-from .shared import lens_choices, type_choices, type_choices_help, double_type_fov_warning, rotation_help
+from .shared import (
+    lens_choices,
+    type_choices,
+    type_choices_help,
+    double_type_fov_warning,
+    rotation_help,
+)
 
 
 def _check_fov(fov: float, image_type: LensImageType):
@@ -41,34 +52,70 @@ def _check_fov(fov: float, image_type: LensImageType):
 
 def check_output(output: Path):
     out = Path(output)
-    if not (out.suffix.lower() in ['.jpg', '.jpeg', '.png']):
+    if not (out.suffix.lower() in [".jpg", ".jpeg", ".png"]):
         print("The desired output image should be a JPG or PNG file.")
-        print("Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)")
+        print(
+            "Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)"
+        )
         print("Exiting!")
         sys.exit(1)
     if out.exists():
         while True:
             ans = input("File already exists. Overwrite? (y/n) ")
-            if ans in ['y', 'n']:
+            if ans in ["y", "n"]:
                 break
-        if ans == 'n':
-            print('Exiting!')
+        if ans == "n":
+            print("Exiting!")
             sys.exit(0)
     return out
 
 
-@click.argument('input_image', type=click.Path(exists=True))
-@click.option('--type', required=True, help='The type of the output image. ' + type_choices_help,
-              type=type_choices)
-@click.option('--lens', required=True, help='The lens type to be used on the output photo.',
-              type=lens_choices)
-@click.option('--fov', required=True, type=click.FLOAT,
-              help='The lens field of view of the output photo in degrees. ' + double_type_fov_warning)
-@click.option('--ssample', required=False, type=click.INT, help='The ammount of supersampling applied', default=1)
-@click.option('-r', '--rotation', required=False, type=click.FLOAT, nargs=3, default=(0, 0, 0), help=rotation_help)
-@click.argument('output_image', type=click.Path(exists=False))
-def make_photo(input_image: click.Path, type: str, lens: str, fov: float, output_image: click.Path,
-               ssample: int, rotation: Tuple) -> None:
+@click.argument("input_image", type=click.Path(exists=True))
+@click.option(
+    "--type",
+    required=True,
+    help="The type of the output image. " + type_choices_help,
+    type=type_choices,
+)
+@click.option(
+    "--lens",
+    required=True,
+    help="The lens type to be used on the output photo.",
+    type=lens_choices,
+)
+@click.option(
+    "--fov",
+    required=True,
+    type=click.FLOAT,
+    help="The lens field of view of the output photo in degrees. "
+    + double_type_fov_warning,
+)
+@click.option(
+    "--ssample",
+    required=False,
+    type=click.INT,
+    help="The ammount of supersampling applied",
+    default=1,
+)
+@click.option(
+    "-r",
+    "--rotation",
+    required=False,
+    type=click.FLOAT,
+    nargs=3,
+    default=(0, 0, 0),
+    help=rotation_help,
+)
+@click.argument("output_image", type=click.Path(exists=False))
+def make_photo(
+    input_image: click.Path,
+    type: str,
+    lens: str,
+    fov: float,
+    output_image: click.Path,
+    ssample: int,
+    rotation: Tuple,
+) -> None:
     """Make a photo out of a panorama.
 
     \b
@@ -77,16 +124,20 @@ def make_photo(input_image: click.Path, type: str, lens: str, fov: float, output
     """
     out = check_output(output_image)
 
-    types_dict = {'inscribed': LensImageType.INSCRIBED,
-                  'double': LensImageType.DOUBLE_INSCRIBED,
-                  'cropped': LensImageType.CROPPED_CIRCLE,
-                  'full': LensImageType.FULL_FRAME}
+    types_dict = {
+        "inscribed": LensImageType.INSCRIBED,
+        "double": LensImageType.DOUBLE_INSCRIBED,
+        "cropped": LensImageType.CROPPED_CIRCLE,
+        "full": LensImageType.FULL_FRAME,
+    }
 
-    lens_types = {'equidistant': equidistant,
-                  'equisolid': equisolid,
-                  'orthographic': orthographic,
-                  'rectilinear': rectilinear,
-                  'stereographic': stereographic}
+    lens_types = {
+        "equidistant": equidistant,
+        "equisolid": equisolid,
+        "orthographic": orthographic,
+        "rectilinear": rectilinear,
+        "stereographic": stereographic,
+    }
 
     source_lens = lens_types[lens]
     source_type = types_dict[type]
@@ -96,20 +147,22 @@ def make_photo(input_image: click.Path, type: str, lens: str, fov: float, output
         with Image.open(input_image) as image:
             source_array = np.asarray(image)
     except IOError:
-        print('Error: Input image could not be opened!')
-        print('Exiting!')
+        print("Error: Input image could not be opened!")
+        print("Exiting!")
         sys.exit(1)
 
-    source_sphere = make_sphere_image(source_array, source_lens, source_type, fov, rotation)
+    source_sphere = make_sphere_image(
+        source_array, source_lens, source_type, fov, rotation
+    )
 
     destiny_arr = source_sphere.get_image_array()
     destiny_image = Image.fromarray(destiny_arr)
 
-    print('Finished!')
+    print("Finished!")
 
     try:
         destiny_image.save(output_image)
     except IOError:
-        print('Could not save to the specified location!')
-        print('Exiting!')
+        print("Could not save to the specified location!")
+        print("Exiting!")
         sys.exit(1)

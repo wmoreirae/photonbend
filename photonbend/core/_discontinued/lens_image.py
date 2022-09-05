@@ -27,7 +27,7 @@ from photonbend.utils import vector_magnitude, decompose, weighted_sum
 from photonbend.core._discontinued.lens_image_type import LensImageType
 
 DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]
-FULL_CIRCLE = (np.pi * 2)
+FULL_CIRCLE = np.pi * 2
 INVALID_POSITION = (-1, -1)
 
 
@@ -42,13 +42,13 @@ def _a_numba_function_definition(_b, _c):
 
 
 spec = [
-    ('north_pole', complex128),
-    ('south_pole', complex128),
-    ('fov', float64),
-    ('dpf', float64),
-    ('image', uint8[:, :, :]),
-    ('image_type', int64),
-    ('lens', typeof(_a_numba_function_definition)),
+    ("north_pole", complex128),
+    ("south_pole", complex128),
+    ("fov", float64),
+    ("dpf", float64),
+    ("image", uint8[:, :, :]),
+    ("image_type", int64),
+    ("lens", typeof(_a_numba_function_definition)),
 ]
 
 
@@ -62,7 +62,9 @@ class LensImage:
     def __init__(self, image_arr, i_type, fov, lens):
         if i_type == LensImageType.DOUBLE_INSCRIBED:
             if fov < np.pi:
-                raise ValueError("The FOV of a DOUBLE_INSCRIBED image should be of at minimum pi radians")
+                raise ValueError(
+                    "The FOV of a DOUBLE_INSCRIBED image should be of at minimum pi radians"
+                )
 
         self.image = image_arr
         self.image_type = i_type
@@ -81,7 +83,9 @@ class LensImage:
                 self.north_pole -= complex(0.5, 0.5)
                 self.south_pole = self.north_pole + real_width
             else:
-                raise ValueError("The LensImage class doesn't support vertical double inscribed images")
+                raise ValueError(
+                    "The LensImage class doesn't support vertical double inscribed images"
+                )
         else:  # Simple image
             self.north_pole = complex(width, height) / 2
             self.north_pole -= complex(0.5, 0.5)
@@ -127,7 +131,7 @@ class LensImage:
         return self.image.shape
 
     def get_image_array(self):
-        """ Returns a copy of the underlying image matrix
+        """Returns a copy of the underlying image matrix
         :return: A copy of the image array
         """
         return np.copy(self.image)
@@ -161,7 +165,7 @@ class LensImage:
         return True
 
     def get_from_cartesian(self, x: int, y: int) -> uint8[:]:
-        """ Get the value represented on the cartesian position x, y of this image
+        """Get the value represented on the cartesian position x, y of this image
 
         :param x: The horizontal position of the desired value
         :param y: The vertical position of the desired value
@@ -170,10 +174,12 @@ class LensImage:
         if self.is_position(x, y):
             return self.image[y, x, :]
         else:
-            raise Exception("The requested cartesian coordinates are outside the bounds of the image!")
+            raise Exception(
+                "The requested cartesian coordinates are outside the bounds of the image!"
+            )
 
     def set_to_cartesian(self, x: int, y: int, value: uint8[:]) -> None:
-        """ Get the value represented on the cartesian position x, y of this image
+        """Get the value represented on the cartesian position x, y of this image
 
         :param value:
         :param x: The horizontal position of the desired value
@@ -183,7 +189,9 @@ class LensImage:
         if self.is_position(x, y):
             self.image[y, x, :] = value
         else:
-            raise Exception("The target cartesian coordinates are outside the bounds of the image!")
+            raise Exception(
+                "The target cartesian coordinates are outside the bounds of the image!"
+            )
 
     def get_from_spherical(self, latitude: float, longitude: float) -> uint8[:]:
         pos1, pos2 = self.translate_spherical_to_cartesian(latitude, longitude)
@@ -239,9 +247,13 @@ class LensImage:
                 if pos2 != INVALID_POSITION:
                     self.set_to_cartesian(*_2ints(*pos2), data)
         except Exception:
-            raise Exception("The given spherical coordinates are not represented on the cartesian image")
+            raise Exception(
+                "The given spherical coordinates are not represented on the cartesian image"
+            )
 
-    def translate_spherical_to_cartesian(self, latitude: float, longitude: float) -> DoubleCardinal:
+    def translate_spherical_to_cartesian(
+        self, latitude: float, longitude: float
+    ) -> DoubleCardinal:
         """
         :param latitude:
         :param longitude:
@@ -275,7 +287,9 @@ class LensImage:
         if latitude < (0 + double_image_latitude):
             polar_distance = self.lens(np.pi / 2 + latitude, False) * self.dpf
             factors = np.exp(longitude * 1j)
-            factors = complex(-factors.real, factors.imag)  # double_inscribed X inversion
+            factors = complex(
+                -factors.real, factors.imag
+            )  # double_inscribed X inversion
             relative_position = factors * polar_distance
             position = self.relative_to_absolute(relative_position, self.south_pole)
             pos2 = decompose(position)
@@ -283,38 +297,54 @@ class LensImage:
             pos2 = INVALID_POSITION
         return pos1, pos2
 
-    def translate_cartesian_to_spherical(self, x: float, y: float) -> Tuple[float, float]:
+    def translate_cartesian_to_spherical(
+        self, x: float, y: float
+    ) -> Tuple[float, float]:
         max_latitude = np.pi / 2
         min_latitude = max_latitude - self.fov / 2
         if self.image_type == LensImageType.DOUBLE_INSCRIBED:
             min_latitude = -max_latitude
 
         absolute_position = complex(x, y)
-        relative_position, reference_point = self.absolute_to_relative(absolute_position)
+        relative_position, reference_point = self.absolute_to_relative(
+            absolute_position
+        )
 
         magnitude = vector_magnitude(relative_position)
         if magnitude > self.maximum_magnitude:
-            raise Exception('not a valid position')
+            raise Exception("not a valid position")
 
         if reference_point == self.north_pole:
             latitude = max_latitude - self.lens(magnitude / self.dpf, True)
         else:  # reference_point == self.south_pole
             latitude = min_latitude + self.lens(magnitude / self.dpf, True)
 
-        if self.image_type == LensImageType.DOUBLE_INSCRIBED and reference_point == self.south_pole:
-            relative_position = complex(-relative_position.real, relative_position.imag)  # double inscribed inversion
+        if (
+            self.image_type == LensImageType.DOUBLE_INSCRIBED
+            and reference_point == self.south_pole
+        ):
+            relative_position = complex(
+                -relative_position.real, relative_position.imag
+            )  # double inscribed inversion
         euler_relative_position = relative_position / magnitude
         longitude = np.log(euler_relative_position).imag
 
         return latitude, longitude
 
-    def relative_to_absolute(self, relative_position: complex, reference_point: complex) -> complex:
+    def relative_to_absolute(
+        self, relative_position: complex, reference_point: complex
+    ) -> complex:
         if reference_point == self.north_pole or reference_point == self.south_pole:
             return (relative_position.real + reference_point.real) + 1j * (
-                    reference_point.imag - relative_position.imag)
-        raise Exception("Only the image's north and south poles may be used as a reference point")
+                reference_point.imag - relative_position.imag
+            )
+        raise Exception(
+            "Only the image's north and south poles may be used as a reference point"
+        )
 
-    def absolute_to_relative(self, absolute_position: complex) -> Tuple[complex, complex]:
+    def absolute_to_relative(
+        self, absolute_position: complex
+    ) -> Tuple[complex, complex]:
         x = absolute_position.real
 
         reference_point = self.north_pole
@@ -323,5 +353,8 @@ class LensImage:
             if x >= halfway_x:
                 reference_point = self.south_pole
 
-        return ((absolute_position.real - reference_point.real) + 1j * (reference_point.imag - absolute_position.imag),
-                reference_point)
+        return (
+            (absolute_position.real - reference_point.real)
+            + 1j * (reference_point.imag - absolute_position.imag),
+            reference_point,
+        )

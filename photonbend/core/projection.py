@@ -1,18 +1,23 @@
+
 #   Copyright (c) 2022. Edson Moreira
 #
-#   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-#   documentation files (the "Software"), to deal in the Software without restriction, including without limitation
-#   the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
-#   to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
 #
-#   The above copyright notice and this permission notice shall be included in all copies or substantial portions of
-#   the Software.
+#   The above copyright notice and this permission notice shall be included in
+#   all copies or substantial portions of the Software.
 #
-#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-#   BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-#   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-#   DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
 
 from typing import Protocol, Callable, Union, Tuple
 from abc import abstractmethod
@@ -22,7 +27,9 @@ import numpy.typing as npt
 from photonbend.core._shared import make_complex
 from photonbend.core.lens import Lens
 
-ForwardReverseLensFunction = Callable[[Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]]
+ForwardReverseLensFunction = Callable[
+    [Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]
+]
 LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
 
@@ -34,16 +41,20 @@ class ProjectionImage(Protocol):
         ...
 
     @abstractmethod
-    def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
+    def process_coordinate_map(
+        self, coordinate_map: npt.NDArray[np.core.float64]
+    ) -> npt.NDArray[np.core.int8]:
         ...
 
 
 """A typing for lens functions"""
-ForwardReverseLensFunction = Callable[[Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]]
+ForwardReverseLensFunction = Callable[
+    [Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]
+]
 
 
 class CameraImage(ProjectionImage):
-    """Store and process camera-based images and their coordinates
+    """Store and process camera-based images and their coordinates.
 
     This class maps each pixel of an image to a polar coordinates of the form
     (latitude, longitude) based on its attributes.
@@ -60,9 +71,14 @@ class CameraImage(ProjectionImage):
         f_distance (float): The focal distance of this image in pixels.
     """
 
-    def __init__(self, image_arr: npt.NDArray[np.core.int8], fov: float, lens: Lens,
-                 magnitude: Union[None, float] = None):
-        """Initializes instance attributes
+    def __init__(
+        self,
+        image_arr: npt.NDArray[np.core.int8],
+        fov: float,
+        lens: Lens,
+        magnitude: Union[None, float] = None,
+    ):
+        """Initializes instance attributes.
         Args:
             image_arr (np.ndarray): A numpy array of int8 representing an RGB
                 image. The image follows the shape (height, width, 3).
@@ -70,10 +86,9 @@ class CameraImage(ProjectionImage):
             lens (Lens): A lens with its forward and reverse functions.
             magnitude (float): The distance in pixels from the center of the
                 image where the maximum FoV is reached.
-                For the default case of an inscribed circle image, this
-                value is calculated automatically, therefore it should
-                only be used when passing an image that is not an
-                inscribed circle.
+                For the default case of an inscribed circle image, this value is
+                calculated automatically, therefore it should only be used when
+                passing an image that is not an inscribed circle.
 
                 **Examples:**
                     * For the inscribed image, it is the image width or
@@ -88,7 +103,9 @@ class CameraImage(ProjectionImage):
         self.forward_lens = lens.forward_function
         self.reverse_lens = lens.reverse_function
 
-        self.magnitude: float = (self.image.shape[0] / 2.0) if (magnitude is None) else magnitude
+        self.magnitude: float = (
+            (self.image.shape[0] / 2.0) if (magnitude is None) else magnitude
+        )
         self.f_distance = self._compute_f_distance()
 
     def _compute_f_distance(self) -> float:
@@ -99,12 +116,13 @@ class CameraImage(ProjectionImage):
 
         Usually only the self.init method should call this.
 
-        It computes the maximum distance the maximum angle this lens is set to produce in focal distances.
-        To simplify the calculations, we always use a focal distance of one, and make the dots per focal distance (dpf)
-        variable.
-        So, in order to calculate the dpf, we measure the maximum distance the lens produce if focal distances,
-        we calculate the longest vector of this image (from the center of the image to one of it's sides) and we
-        divide the second by the first to arrive at the dpf.  Then we set this to the current object.
+        It computes the maximum distance the maximum angle this lens is set to produce
+        in focal distances. To simplify the calculations, we always use a focal distance
+        of one, and make the dots per focal distance (dpf) variable.
+        So, in order to calculate the dpf, we measure the maximum distance the lens
+        produce if focal distances, we calculate the longest vector of this image (from
+        the center of the image to one of it's sides) and we divide the second by the
+        first to arrive at the dpf.  Then we set this to the current object.
 
         :return: float
         """
@@ -115,10 +133,10 @@ class CameraImage(ProjectionImage):
 
     # Protocol implementation
     def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
-        """Returns this image coordinate map
+        """Returns this image coordinate map.
 
-        Returns a coordinate map for this image based on its size, fov,
-        lens function and magnitude.
+        Returns a coordinate map for this image based on its size, fov, lens
+        function and magnitude.
 
         *For more information on coordinate maps check the documentation
         for the photonbend.core module.*
@@ -130,10 +148,14 @@ class CameraImage(ProjectionImage):
 
         # making of the mesh
         x_axis_range = np.linspace(-o_width / 2 + 0.5, o_width / 2 - 0.5, num=o_width)
-        y_axis_range = np.linspace(o_height / 2 - 0.5, -o_height / 2 + 0.5, num=o_height)
-        mesh_y, mesh_x = np.meshgrid(y_axis_range, x_axis_range, sparse=True, indexing='ij')
+        y_axis_range = np.linspace(
+            o_height / 2 - 0.5, -o_height / 2 + 0.5, num=o_height
+        )
+        mesh_y, mesh_x = np.meshgrid(
+            y_axis_range, x_axis_range, sparse=True, indexing="ij"
+        )
 
-        distance_mesh = np.sqrt(mesh_x ** 2 + mesh_y ** 2) / self.f_distance
+        distance_mesh = np.sqrt(mesh_x**2 + mesh_y**2) / self.f_distance
         latitude: npt.NDArray[float] = self.reverse_lens(distance_mesh)
         longitude = np.log(make_complex(mesh_x, mesh_y)).imag
 
@@ -148,11 +170,13 @@ class CameraImage(ProjectionImage):
         return polar_coordinates
 
     # Protocol implementation
-    def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.float64]) -> npt.NDArray[np.core.int8]:
-        """Produces a new image based on a coordinate map
+    def process_coordinate_map(
+        self, coordinate_map: npt.NDArray[np.core.float64]
+    ) -> npt.NDArray[np.core.int8]:
+        """Produces a new image based on a coordinate map.
 
-        Process a given coordinate map and maps each of its coordinates
-        to a pixel on this instance image, producing a new image.
+        Process a given coordinate map and maps each of its coordinates to a
+        pixel on this instance image, producing a new image.
 
         *For more information on coordinate maps, check the documentation
         for the photonbend.core module.*
@@ -177,7 +201,8 @@ class CameraImage(ProjectionImage):
 
         new_image_array = self.image[
             ((unbalanced_position.imag * (-1)) + image_center[0]).astype(int),
-            (unbalanced_position.real + image_center[1]).astype(int)]
+            (unbalanced_position.real + image_center[1]).astype(int),
+        ]
 
         new_image_array[invalid_map] = 0
 
@@ -185,16 +210,15 @@ class CameraImage(ProjectionImage):
 
 
 class PanoramaImage(ProjectionImage):
-    """Store and process equirectangular panorama images and their coordinates
+    """Store and process equirectangular panorama images and their coordinates.
 
-        This class maps each pixel of an image to a polar coordinates of the
-        form (latitude, longitude) based on its size.
-        It can handle equirectangular panoramas (images with a 2:1 width to
-        height ration).
+    This class maps each pixel of an image to a polar coordinates of the form
+    (latitude, longitude) based on its size. It can handle equirectangular
+    panoramas (images with a 2:1 width to height ration).
 
-        Attributes:
-            image (np.ndarray[int]): The image as an array of shape
-                (height, width, 3).
+    Attributes:
+        image (np.ndarray[int]): The image as an array of shape
+            (height, width, 3).
     """
 
     def __init__(self, image_arr: npt.NDArray[np.core.int8]):
@@ -208,7 +232,7 @@ class PanoramaImage(ProjectionImage):
         self.image = image_arr
 
     def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
-        """Returns this image coordinate map
+        """Returns this image coordinate map.
 
         Returns a coordinate map for this image based solely on its  dimensions.
 
@@ -222,30 +246,36 @@ class PanoramaImage(ProjectionImage):
         height, width = self.image.shape[:2]
         half_pi_element = np.pi / width / 2
 
-        x_axis_range = np.linspace(-np.pi + half_pi_element, np.pi - half_pi_element, num=width)
+        x_axis_range = np.linspace(
+            -np.pi + half_pi_element, np.pi - half_pi_element, num=width
+        )
         y_axis_range = np.linspace(0, np.pi, num=height)
-        mesh_y, mesh_x = np.meshgrid(y_axis_range, x_axis_range, sparse=False, indexing='ij')
+        mesh_y, mesh_x = np.meshgrid(
+            y_axis_range, x_axis_range, sparse=False, indexing="ij"
+        )
         mesh_y = mesh_y.reshape(*mesh_y.shape, 1)
         mesh_x = mesh_x.reshape(*mesh_x.shape, 1)
         invalid = np.zeros((*self.image.shape[:2], 1), np.core.float64)
         coordinate_map = np.concatenate((mesh_y, mesh_x, invalid), axis=2)
         return coordinate_map
 
-    def process_coordinate_map(self, coordinate_map: npt.NDArray[np.core.int8]) -> npt.NDArray[np.core.int8]:
-        """Produces a new image based on a coordinate maps
+    def process_coordinate_map(
+        self, coordinate_map: npt.NDArray[np.core.int8]
+    ) -> npt.NDArray[np.core.int8]:
+        """Produces a new image based on a coordinate maps.
 
-        Process a given coordinate map and maps each of its coordinates
-        to a pixel on this instance image, producing a new image.
+        Process a given coordinate map and maps each of its coordinates  to a
+        pixel on this instance image, producing a new image.
 
-        *For more information on coordinate maps, check the documentation
-        for the photonbend.core module.*
+        *For more information on coordinate maps, check the documentation for
+        the photonbend.core module.*
 
         Args:
             coordinate_map (np.ndarray): A numpy array of float64 as a
             coordinate map.
         Returns:
-            A new image (ndarray) based on the pixel data of this
-            instance and the given coordinate map.
+            A new image (ndarray) based on the pixel data of this instance and
+            the given coordinate map.
         """
         invalid_map = coordinate_map[:, :, 2] != 0.0
         polar_map = coordinate_map[:, :, :2]
@@ -264,11 +294,12 @@ class PanoramaImage(ProjectionImage):
         return image
 
 
-def map_projection(coordinate_map: npt.NDArray[np.core.float64]) -> \
-        npt.NDArray[np.core.int8]:
-    """Converts a coordinate map to a color map
+def map_projection(
+    coordinate_map: npt.NDArray[np.core.float64],
+) -> npt.NDArray[np.core.int8]:
+    """Converts a coordinate map to a color map.
 
-    Converts a coordinate to a RGB color map so that we can see the
+    Converts a coordinate to a RGB color map so that we can see the projection.
     """
     rgb_range = 255.0
 
@@ -299,7 +330,13 @@ def map_projection(coordinate_map: npt.NDArray[np.core.float64]) -> \
     # TODO check if some overflow is happening
     invalid_map_8bits = (invalid_map.astype(np.core.uint8) * 255).astype(np.core.uint8)
 
-    mapping_image = np.concatenate([np.expand_dims(distance_map_8bits, 2), np.expand_dims(position_map_8bits, 2),
-                                    np.expand_dims(invalid_map_8bits, 2)], axis=2)
+    mapping_image = np.concatenate(
+        [
+            np.expand_dims(distance_map_8bits, 2),
+            np.expand_dims(position_map_8bits, 2),
+            np.expand_dims(invalid_map_8bits, 2),
+        ],
+        axis=2,
+    )
 
     return mapping_image
