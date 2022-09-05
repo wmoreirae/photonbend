@@ -13,21 +13,36 @@
 #  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 #  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
 import warnings
-# import numba as nb
 
-from typing import Callable, Union, Tuple
+from typing import Callable, Union
 from photonbend.utils import to_radians
 
 LensArgument = Union[float, npt.NDArray[float]]
 ForwardReverseLensFunction = Callable[[LensArgument], LensArgument]
-LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
 
 
-# TODO check speeds to see if removing numba is plausible
+@dataclass
+class Lens:
+    """Represents a lens with both forward and reverse functions
+
+    Attributes:
+        forward_function (ForwardReverseLensFunction): A function that given
+            an incidence angle in radians gives back a distance from the
+            projection center in focal distance units.
+            It must handle either a single float or an array of floats.
+        reverse_function (ForwardReverseLensFunction): A function that
+            given an distance from the projection center in focal
+            distance units back the incidence angle in radians.
+            It must handle either a single float or an array of floats.
+    """
+
+    forward_function: ForwardReverseLensFunction
+    reverse_function: ForwardReverseLensFunction
 
 
 # @nb.vectorize
@@ -291,25 +306,34 @@ def _thoby(theta: LensArgument) -> LensArgument:
 # Begin the exported functions
 
 
-def rectilinear() -> LensFunction:
-    return _rectilinear, _rectilinear_inverse
+def rectilinear() -> Lens:
+    """Returns a rectilinear lens"""
+    return Lens(_rectilinear, _rectilinear_inverse)
 
 
-def equisolid() -> LensFunction:
-    return _equisolid, _equisolid_inverse
+def equisolid() -> Lens:
+    """Returns an equisolid lens"""
+    return Lens(_equisolid, _equisolid_inverse)
 
 
-def equidistant() -> LensFunction:
-    return _equidistant, _equidistant_inverse
+def equidistant() -> Lens:
+    """Returns an equidistant lens"""
+    return Lens(_equidistant, _equidistant_inverse)
 
 
-def orthographic() -> LensFunction:
-    return _orthographic, _orthographic_inverse
+def orthographic() -> Lens:
+    """Returns an orthographic lens"""
+    return Lens(_orthographic, _orthographic_inverse)
 
 
-def stereographic() -> LensFunction:
-    return _stereographic, _stereographic_inverse
+def stereographic() -> Lens:
+    """Returns a stereographic lens"""
+    return Lens(_stereographic, _stereographic_inverse)
 
 
-def thoby() -> LensFunction:
-    return _thoby, _thoby_inverse
+def thoby() -> Lens:
+    """Returns a thoby lens"""
+    return Lens(_thoby, _thoby_inverse)
+
+
+__all__ = [Lens, equisolid, equidistant, rectilinear, stereographic, orthographic, thoby]
