@@ -1,4 +1,3 @@
-
 #   Copyright (c) 2022. Edson Moreira
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,7 +24,9 @@ import numpy.typing as npt
 from photonbend.core._shared import make_complex
 
 
-def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
+def _calculate_rotation_matrix(
+    pitch: float, yaw: float, roll: float
+) -> npt.NDArray[np.float64]:
     """Computes a rotation matrix from the three primary rotation axis
     For more info see:  https://en.wikipedia.org/wiki/Rotation_matrix
     or: https://mathworld.wolfram.com/RotationMatrix.html
@@ -38,7 +39,6 @@ def _calculate_rotation_matrix(pitch: float, yaw: float, roll: float):
         A rotation matrix.
     """
 
-    # TODO unwind the matrices and wind them up with array methods so they are contiguous
     cos_pitch = np.cos(pitch)
     sin_pitch = np.sin(pitch)
     pitch_matrix = np.array(
@@ -78,15 +78,18 @@ class Rotation:
     Example:
         Rotate an image using a rotation and a coordinate map:
 
+            # Get a coordinate map
             coordinate_map = a_projection_image.get_coordinate_map()
             # Creates a rotation and uses it to rotate a coordinate map
             rotation = Rotation(np.pi/2, 0, 0)
             rotated_coordinate_map = rotation.rotate_coordinate_map(coordinate_map)
             # Get the rotated image array
-            rotated_image = a_projection_image.process_coordinate_map(rotated_coordinate_map)
+            rotated_image = a_projection_image
+                .process_coordinate_map(rotated_coordinate_map)
+
     """
 
-    def __init__(self, pitch: float, yaw: float, roll: float):
+    def __init__(self, pitch: float, yaw: float, roll: float) -> None:
         """Initializes instance attributes
 
         Args:
@@ -97,8 +100,8 @@ class Rotation:
         self.rotation_matrix = _calculate_rotation_matrix(pitch, yaw, roll)
 
     def rotate_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.core.float64]
-    ) -> npt.NDArray[np.core.int8]:
+        self, coordinate_map: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         """Rotates a coordinate map in the pitch, yaw, and roll axis.
 
         Rotates a coordinate map, producing a new coordinate map.
@@ -121,7 +124,8 @@ class Rotation:
         invalid_map = coordinate_map[:, :, 2] != 0.0
         polar_map[invalid_map] = 0
 
-        # Convert the polar coordinate map into 3 maps representing 3D coordinates (x, y, z)
+        # Convert the polar coordinate map into 3 maps representing 3D
+        # coordinates (x, y, z)
         y = np.cos(latitude)
         xz = np.exp(longitude * 1j) * np.sin(latitude)
         x = xz.real
@@ -131,26 +135,19 @@ class Rotation:
         x = np.expand_dims(x, axis=2)
         y = np.expand_dims(y, axis=2)
         z = np.expand_dims(z, axis=2)
-        position_vector: npt.NDArray[np.core.float64] = np.concatenate(
-            [x, y, z], axis=2
-        )
-        # Expands the dimensions of the map so that it can go through fast matrix multiplication
+        position_vector: npt.NDArray[np.float64] = np.concatenate([x, y, z], axis=2)
+        # Expands the dimensions to use fast matrix multiplication
         position_vector = np.expand_dims(position_vector, axis=3)
 
-        # Does the rotation using matrix multiplication in the last two axis of both matrices, which works really fast
+        # Does the rotation using matrix multiplication in the last two axis of
+        # both matrices, which works really fast
         new_position_vector = np.matmul(
             self.rotation_matrix,
             position_vector,
             axes=[
                 (-2, -1),
-                (
-                    -2,
-                    -1,
-                ),
-                (
-                    -2,
-                    -1,
-                ),
+                (-2, -1),
+                (-2, -1),
             ],
         )
         new_position_vector = new_position_vector.reshape(

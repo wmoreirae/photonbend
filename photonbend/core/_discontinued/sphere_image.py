@@ -102,8 +102,8 @@ class SphereImage:
         """
         self.lens_image = LensImage(image_arr, image_type, fov, lens)
         self.rotated = False
-        self.rotation_matrix = np.zeros((3, 3), np.core.float64)
-        self.i_rotation_matrix = np.zeros((3, 3), np.core.float64)
+        self.rotation_matrix = np.zeros((3, 3), np.float64)
+        self.i_rotation_matrix = np.zeros((3, 3), np.float64)
         self.set_rotation(0.0, 0.0, 0.0)
 
     def _get_rotated_spherical_coordinates(
@@ -126,7 +126,7 @@ class SphereImage:
         x = xz.real * np.cos(latitude)
         z = xz.imag * np.cos(latitude)
 
-        position_vector = np.zeros(3, np.core.float64)
+        position_vector = np.zeros(3, np.float64)
         position_vector[:] = x, y, z
         if not inverse:
             new_position_vector = self.rotation_matrix.dot(position_vector)
@@ -336,7 +336,7 @@ def _helper_map_from_sphere_image(
             else:
                 # super sampling
                 super_sample_matrix = np.zeros(
-                    (super_sampler, super_sampler, 3), np.core.uint8
+                    (super_sampler, super_sampler, 3), np.uint8
                 )
                 for ss_row in prange(super_sampler):
                     for ss_column in prange(super_sampler):
@@ -359,7 +359,7 @@ def _helper_map_from_sphere_image(
                         ] = that_image.get_from_spherical(lat, lon)
 
                 # Calculate the pixel mean and assign it!
-                ss_mean = np.zeros(3, np.core.uint8)
+                ss_mean = np.zeros(3, np.uint8)
                 ss_mean[0] = int(round(np.mean(super_sample_matrix[:, :, 0])))
                 ss_mean[1] = int(round(np.mean(super_sample_matrix[:, :, 1])))
                 ss_mean[2] = int(round(np.mean(super_sample_matrix[:, :, 2])))

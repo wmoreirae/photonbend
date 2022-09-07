@@ -1,4 +1,3 @@
-
 #   Copyright (c) 2022. Edson Moreira
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,7 +18,9 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-from typing import Protocol, Callable, Union, Tuple
+# TODO try to use the old SphereImage supersampling code to improve the new base
+
+from typing import Protocol, Union, TypeVar
 from abc import abstractmethod
 import numpy as np
 import numpy.typing as npt
@@ -27,30 +28,22 @@ import numpy.typing as npt
 from photonbend.core._shared import make_complex
 from photonbend.core.lens import Lens
 
-ForwardReverseLensFunction = Callable[
-    [Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]
-]
-LensFunction = Tuple[ForwardReverseLensFunction, ForwardReverseLensFunction]
+
+UniFloat = TypeVar("UniFloat", float, npt.NDArray[np.float64])
 
 
 class ProjectionImage(Protocol):
     image: np.ndarray
 
     @abstractmethod
-    def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
+    def get_coordinate_map(self) -> npt.NDArray[np.float64]:
         ...
 
     @abstractmethod
     def process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.core.float64]
-    ) -> npt.NDArray[np.core.int8]:
+        self, coordinate_map: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.int8]:
         ...
-
-
-"""A typing for lens functions"""
-ForwardReverseLensFunction = Callable[
-    [Union[float, npt.NDArray[float]]], Union[float, npt.NDArray[float]]
-]
 
 
 class CameraImage(ProjectionImage):
@@ -73,7 +66,7 @@ class CameraImage(ProjectionImage):
 
     def __init__(
         self,
-        image_arr: npt.NDArray[np.core.int8],
+        image_arr: npt.NDArray[np.int8],
         fov: float,
         lens: Lens,
         magnitude: Union[None, float] = None,
@@ -132,7 +125,7 @@ class CameraImage(ProjectionImage):
         return maximum_image_magnitude / lens_max_angle_magnitude
 
     # Protocol implementation
-    def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
+    def get_coordinate_map(self) -> npt.NDArray[np.float64]:
         """Returns this image coordinate map.
 
         Returns a coordinate map for this image based on its size, fov, lens
@@ -156,14 +149,14 @@ class CameraImage(ProjectionImage):
         )
 
         distance_mesh = np.sqrt(mesh_x**2 + mesh_y**2) / self.f_distance
-        latitude: npt.NDArray[float] = self.reverse_lens(distance_mesh)
+        latitude: npt.NDArray[np.float64] = self.reverse_lens(distance_mesh)
         longitude = np.log(make_complex(mesh_x, mesh_y)).imag
 
         latitude = latitude.reshape(*latitude.shape, 1)
         longitude = longitude.reshape(*longitude.shape, 1)
         invalid = distance_mesh > self.forward_lens(self.fov / 2)
 
-        invalid_float = invalid.astype(np.core.float64)
+        invalid_float = invalid.astype(np.float64)
         invalid_float = np.expand_dims(invalid_float, axis=2)
 
         polar_coordinates = np.concatenate([latitude, longitude, invalid_float], 2)
@@ -171,8 +164,8 @@ class CameraImage(ProjectionImage):
 
     # Protocol implementation
     def process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.core.float64]
-    ) -> npt.NDArray[np.core.int8]:
+        self, coordinate_map: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.int8]:
         """Produces a new image based on a coordinate map.
 
         Process a given coordinate map and maps each of its coordinates to a
@@ -182,7 +175,7 @@ class CameraImage(ProjectionImage):
         for the photonbend.core module.*
 
         Args:
-            coordinate_map (np.ndarray[float64]): A coordinate map.
+            coordinate_map (np.ndarray[np.float64]): A coordinate map.
         Returns:
             A new image based on the pixel data of this instance and the given
                 coordinate map.
@@ -221,7 +214,7 @@ class PanoramaImage(ProjectionImage):
             (height, width, 3).
     """
 
-    def __init__(self, image_arr: npt.NDArray[np.core.int8]):
+    def __init__(self, image_arr: npt.NDArray[np.int8]) -> None:
         """Initializes instance attributes
 
         Args:
@@ -231,7 +224,7 @@ class PanoramaImage(ProjectionImage):
 
         self.image = image_arr
 
-    def get_coordinate_map(self) -> npt.NDArray[np.core.float64]:
+    def get_coordinate_map(self) -> npt.NDArray[np.float64]:
         """Returns this image coordinate map.
 
         Returns a coordinate map for this image based solely on its  dimensions.
@@ -255,13 +248,13 @@ class PanoramaImage(ProjectionImage):
         )
         mesh_y = mesh_y.reshape(*mesh_y.shape, 1)
         mesh_x = mesh_x.reshape(*mesh_x.shape, 1)
-        invalid = np.zeros((*self.image.shape[:2], 1), np.core.float64)
+        invalid = np.zeros((*self.image.shape[:2], 1), np.float64)
         coordinate_map = np.concatenate((mesh_y, mesh_x, invalid), axis=2)
         return coordinate_map
 
     def process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.core.int8]
-    ) -> npt.NDArray[np.core.int8]:
+        self, coordinate_map: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.int8]:
         """Produces a new image based on a coordinate maps.
 
         Process a given coordinate map and maps each of its coordinates  to a
@@ -295,8 +288,8 @@ class PanoramaImage(ProjectionImage):
 
 
 def map_projection(
-    coordinate_map: npt.NDArray[np.core.float64],
-) -> npt.NDArray[np.core.int8]:
+    coordinate_map: npt.NDArray[np.float64],
+) -> npt.NDArray[np.int8]:
     """Converts a coordinate map to a color map.
 
     Converts a coordinate to a RGB color map so that we can see the projection.
@@ -319,16 +312,16 @@ def map_projection(
     new_distance[valid_map] -= min_distance
     new_distance[valid_map] *= mm_factor
 
-    distance_map_8bits = np.round(new_distance).astype(np.core.uint8)
+    distance_map_8bits = np.round(new_distance).astype(np.uint8)
 
     # Direction
     unbalanced_position = polar_map[:, :, 1]
     d_factor = rgb_range / (np.pi * 2)
     position_map = d_factor * unbalanced_position
-    position_map_8bits = np.round(position_map).astype(np.core.uint8)
+    position_map_8bits = np.round(position_map).astype(np.uint8)
 
     # TODO check if some overflow is happening
-    invalid_map_8bits = (invalid_map.astype(np.core.uint8) * 255).astype(np.core.uint8)
+    invalid_map_8bits = (invalid_map.astype(np.uint8) * 255).astype(np.uint8)
 
     mapping_image = np.concatenate(
         [

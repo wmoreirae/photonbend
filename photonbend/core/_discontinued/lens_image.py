@@ -202,12 +202,12 @@ class LensImage:
                 r_value = self._ds_get_from_spherical(latitude, pos1, pos2)
                 return r_value
         except:
-            r = np.zeros(3, np.core.uint8)
+            r = np.zeros(3, np.uint8)
             r[:] = 0, 0, 0
             return r
 
     def _ds_get_from_spherical(self, latitude, pos1, pos2):
-        r_value = np.zeros(3, np.core.uint8)
+        r_value = np.zeros(3, np.uint8)
         double_image_latitude = (self.fov - np.pi) / 2
         if (latitude > double_image_latitude) or (latitude < (-double_image_latitude)):
             if latitude >= 0:

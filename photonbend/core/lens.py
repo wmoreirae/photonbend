@@ -1,5 +1,3 @@
-
-
 #   Copyright (c) 2022. Edson Moreira
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,17 +18,30 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+__doc__ = (
+    """This module has the lens class and using it, it defines many lenses that
+    are available.
+
+    It defines the **UniFloat** type. For all intents and purposes, this type
+    means either **float** or **npt.NDArray[np.float64]**, but only one of them
+    per call.
+
+    That means all lens functions:
+    * Return a *float* when given one.
+    * Return a *npt.NDArray[float]* when given one.
+    """
+)
+
 from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
 import warnings
 
-from typing import Callable, Union
+from typing import Callable, TypeVar, cast
 from photonbend.utils import to_radians
 
-LensArgument = Union[float, npt.NDArray[float]]
-ForwardReverseLensFunction = Callable[[LensArgument], LensArgument]
+UniFloat = TypeVar("UniFloat", float, npt.NDArray[np.float64])
 
 
 @dataclass
@@ -38,30 +49,30 @@ class Lens:
     """Represents a lens with both forward and reverse functions
 
     Attributes:
-        forward_function (ForwardReverseLensFunction): A function that given
+        forward_function (Callable[[UniFloat], UniFloat]): A function that given
             an incidence angle in radians gives back a distance from the
             projection center in focal distance units.
             It must handle either a single float or an array of floats.
-        reverse_function (ForwardReverseLensFunction): A function that
+        reverse_function (Callable[[UniFloat], UniFloat]): A function that
             given an distance from the projection center in focal
             distance units back the incidence angle in radians.
             It must handle either a single float or an array of floats.
     """
 
-    forward_function: ForwardReverseLensFunction
-    reverse_function: ForwardReverseLensFunction
+    forward_function: Callable[[UniFloat], UniFloat]
+    reverse_function: Callable[[UniFloat], UniFloat]
 
 
 # @nb.vectorize
 def _rectilinear_inverse(
-    projection_in_focal_distance_units: LensArgument,
-) -> LensArgument:
+    projection_in_focal_distance_units: UniFloat,
+) -> UniFloat:
     theta = np.arctan(projection_in_focal_distance_units)
     return theta
 
 
 # TODO fix this function so it works with numpy arrays
-def _rectilinear(theta: LensArgument) -> LensArgument:
+def _rectilinear(theta: UniFloat) -> UniFloat:
     """Mapping that uses the angle tangent
 
     As it uses the angle tangent, it should not be used with lens angles closing on 180
@@ -77,12 +88,12 @@ def _rectilinear(theta: LensArgument) -> LensArgument:
         raise ValueError("The angle theta cannot be negative")
     if theta > to_radians(89):
         raise ValueError(
-            "The rectilinear function was not made to handle FOV larger than 179 degrees"
+            "The Rectilinear lens can't handle FoV larger than 179 degrees"
         )
     return np.tan(theta)
 
 
-def _stereographic_inverse(projection_in_f_units: LensArgument) -> LensArgument:
+def _stereographic_inverse(projection_in_f_units: UniFloat) -> UniFloat:
     """Inverse stereographic function
 
     As an inverse lens function, it takes a distance from the center of
@@ -98,13 +109,13 @@ def _stereographic_inverse(projection_in_f_units: LensArgument) -> LensArgument:
             angles in radians.
     """
 
-    half_tan_theta = projection_in_f_units / 2
+    half_tan_theta = projection_in_f_units / 2.0
     half_theta = np.arctan(half_tan_theta)
-    theta = 2 * half_theta
+    theta = 2.0 * half_theta
     return theta
 
 
-def _stereographic(theta: LensArgument) -> LensArgument:
+def _stereographic(theta: UniFloat) -> UniFloat:
     """The stereographic function
 
     As a lens function, it takes an incidence angle and returns a
@@ -119,13 +130,13 @@ def _stereographic(theta: LensArgument) -> LensArgument:
         A float or a numpy array of floats representing the distance in
             focal units the angles would be projected.
     """
-    half_theta = theta / 2
+    half_theta = theta / 2.0
     half_projection = np.tan(half_theta)
-    projection = 2 * half_projection
+    projection = 2.0 * half_projection
     return projection
 
 
-def _equidistant_inverse(projection_in_f_units: LensArgument) -> LensArgument:
+def _equidistant_inverse(projection_in_f_units: UniFloat) -> UniFloat:
     """The inverse equidistant function
 
     As an inverse lens function, it takes a distance from the center of
@@ -146,7 +157,7 @@ def _equidistant_inverse(projection_in_f_units: LensArgument) -> LensArgument:
 
 
 # @nb.vectorize
-def _equidistant(theta: LensArgument) -> LensArgument:
+def _equidistant(theta: UniFloat) -> UniFloat:
     """The equidistant function
 
     As a lens function, it takes an incidence angle and returns a
@@ -168,7 +179,7 @@ def _equidistant(theta: LensArgument) -> LensArgument:
 
 
 # @nb.vectorize
-def _equisolid_inverse(projection_in_f_units: LensArgument) -> LensArgument:
+def _equisolid_inverse(projection_in_f_units: UniFloat) -> UniFloat:
     """The inverse equisolid function
 
     As an inverse lens function, it takes a distance from the center of
@@ -183,12 +194,12 @@ def _equisolid_inverse(projection_in_f_units: LensArgument) -> LensArgument:
         A float or a numpy array of floats representing the angle or
             angles in radians."""
 
-    half_sin_theta = projection_in_f_units / 2
+    half_sin_theta = projection_in_f_units / 2.0
     with warnings.catch_warnings():
         # ignore warnings that will be thrown because of NaNs
         warnings.simplefilter("ignore")
         half_theta = np.arcsin(half_sin_theta)
-        theta = 2 * half_theta
+        theta = 2.0 * half_theta
 
     nan_values = np.isnan(theta)
     if isinstance(theta, float):
@@ -201,7 +212,7 @@ def _equisolid_inverse(projection_in_f_units: LensArgument) -> LensArgument:
 
 
 # @nb.vectorize
-def _equisolid(theta: LensArgument) -> LensArgument:
+def _equisolid(theta: UniFloat) -> UniFloat:
     """The equisolid function
 
     As a lens function, it takes an incidence angle and returns a
@@ -217,14 +228,14 @@ def _equisolid(theta: LensArgument) -> LensArgument:
             focal units the angles would be projected.
     """
 
-    half_theta = theta / 2
-    half_projection = np.sin(half_theta)
+    half_theta = theta / 2.0
+    half_projection = cast(UniFloat, np.sin(half_theta))
     projection = 2 * half_projection
     return projection
 
 
 # @nb.vectorize
-def _orthographic_inverse(projection_in_f_units: LensArgument) -> LensArgument:
+def _orthographic_inverse(projection_in_f_units: UniFloat) -> UniFloat:
     """The inverse orthographic function
 
     As an inverse lens function, it takes a distance from the center of
@@ -232,18 +243,18 @@ def _orthographic_inverse(projection_in_f_units: LensArgument) -> LensArgument:
     that would produce such distance.
 
     Args:
-         projection_in_f_units: either a float or numpy array containing
-            floats representing the projection in focal distance units.
+         projection_in_f_units (float|ndarray[float]): either a float or an
+            array representing the projection in focal distance units.
 
     Returns:
         A float or a numpy array of floats representing the angle or
             angles in radians."""
-    theta = np.arcsin(projection_in_f_units)
+    theta = cast(UniFloat, np.arcsin(projection_in_f_units))
     return theta
 
 
 # @nb.vectorize
-def _orthographic(theta: LensArgument) -> LensArgument:
+def _orthographic(theta: UniFloat) -> UniFloat:
     """The orthgraphic function
 
     As a lens function, it takes an incidence angle and returns a
@@ -267,7 +278,7 @@ def _orthographic(theta: LensArgument) -> LensArgument:
 
 
 # @nb.vectorize
-def _thoby_inverse(projection_in_f_units: LensArgument) -> LensArgument:
+def _thoby_inverse(projection_in_f_units: UniFloat) -> UniFloat:
     """The inverse thoby function
 
     As an inverse lens function, it takes a distance from the center of
@@ -290,7 +301,7 @@ def _thoby_inverse(projection_in_f_units: LensArgument) -> LensArgument:
 
 
 # @nb.vectorize
-def _thoby(theta: LensArgument) -> LensArgument:
+def _thoby(theta: UniFloat) -> UniFloat:
     """The thoby function
 
     As a lens function, it takes an incidence angle and returns a
@@ -349,11 +360,11 @@ def thoby() -> Lens:
 
 
 __all__ = [
-    Lens,
-    equisolid,
-    equidistant,
-    rectilinear,
-    stereographic,
-    orthographic,
-    thoby,
+    "Lens",
+    "equisolid",
+    "equidistant",
+    "rectilinear",
+    "stereographic",
+    "orthographic",
+    "thoby",
 ]

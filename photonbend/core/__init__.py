@@ -24,4 +24,3 @@ TODO write documentation
 TODO write about coordinate maps
 
 """
-

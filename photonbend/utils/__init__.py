@@ -49,7 +49,7 @@ def to_degrees(radians: float) -> float:
 
 
 def _panorama_to_photo_size_horizontal(
-        panorama_width: int, lens_function: Callable[[float], float]
+    panorama_width: int, lens_function: Callable[[float], float]
 ) -> Tuple[float, float]:
     """Helper functions - not stable"""
 
@@ -63,7 +63,7 @@ def _panorama_to_photo_size_horizontal(
 
 
 def _panorama_to_photo_size_vertical(
-        panorama_height: int, lens_function: Callable[[float], float]
+    panorama_height: int, lens_function: Callable[[float], float]
 ) -> Tuple[float, float]:
     """Helper function - not stable"""
 
@@ -77,9 +77,9 @@ def _panorama_to_photo_size_vertical(
 
 
 def calculate_size_panorama_to_photo(
-        panorama_size: Tuple[int, int],
-        lens_function: Callable[[float], float],
-        preserve_vertical_resolution: bool = False,
+    panorama_size: Tuple[int, int],
+    lens_function: Callable[[float], float],
+    preserve_vertical_resolution: bool = False,
 ) -> Tuple[float, float]:
     """Computes the size for converting a panorama to a camera image.
 
@@ -101,7 +101,7 @@ def calculate_size_panorama_to_photo(
 
     width, height = panorama_size
     assert (
-            width == 2 * height
+        width == 2 * height
     ), "Equirectangular panoramas should have width and height in a 2:1 proportion"
 
     photo_size = _panorama_to_photo_size_horizontal(width, lens_function=lens_function)
@@ -115,4 +115,4 @@ def calculate_size_panorama_to_photo(
     return photo_size
 
 
-__all__ = [to_radians, to_degrees, calculate_size_panorama_to_photo]
+__all__ = ['to_radians', 'to_degrees', 'calculate_size_panorama_to_photo']
