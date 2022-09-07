@@ -19,11 +19,12 @@
 #   SOFTWARE.
 
 import click
-import logging
 from .commands.alter_photo import alter_photo
+
+
 from .commands.make_pano import make_pano
 from .commands.make_photo import make_photo
-import os
+# import os
 
 
 @click.group()
@@ -31,7 +32,7 @@ def main():
     """The photonbend utility allows one to change photos and panoramas.
     It provides multiple commands to change different kinds of images.
     """
-    os.environ["NUMBA_DISABLE_PERFORMANCE_WARNINGS"] = "1"
+    # os.environ["NUMBA_DISABLE_PERFORMANCE_WARNINGS"] = "1"
 
 
 main.command()(make_pano)

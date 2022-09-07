@@ -24,7 +24,7 @@ from numba import uint8, float64, typeof, complex128, cfunc, int64, bool_
 from numba.experimental import jitclass
 
 from photonbend.utils import vector_magnitude, decompose, weighted_sum
-from photonbend.core._discontinued.lens_image_type import LensImageType
+from photonbend.scripts.commands import CameraImageType
 
 DoubleCardinal = Tuple[Tuple[int, int], Tuple[int, int]]
 FULL_CIRCLE = np.pi * 2
@@ -60,7 +60,7 @@ class LensImage:
     """
 
     def __init__(self, image_arr, i_type, fov, lens):
-        if i_type == LensImageType.DOUBLE_INSCRIBED:
+        if i_type == CameraImageType.DOUBLE_INSCRIBED:
             if fov < np.pi:
                 raise ValueError(
                     "The FOV of a DOUBLE_INSCRIBED image should be of at minimum pi radians"
@@ -76,7 +76,7 @@ class LensImage:
     def _set_poles(self):
         height, width = self.image.shape[:2]
 
-        if self.image_type == LensImageType.DOUBLE_INSCRIBED:  # double image
+        if self.image_type == CameraImageType.DOUBLE_INSCRIBED:  # double image
             if width > height:  # horizontal
                 real_width = width / 2
                 self.north_pole = complex(real_width, height) / 2
@@ -116,13 +116,13 @@ class LensImage:
     def maximum_magnitude(self):
         half = 0.5
         half_c = complex(half, half)
-        if self.image_type == LensImageType.FULL_FRAME:
+        if self.image_type == CameraImageType.FULL_FRAME:
             return vector_magnitude(self.north_pole + half_c)
-        elif self.image_type == LensImageType.CROPPED_CIRCLE:
+        elif self.image_type == CameraImageType.CROPPED_CIRCLE:
             return self.north_pole.imag + half
-        elif self.image_type == LensImageType.INSCRIBED:
+        elif self.image_type == CameraImageType.INSCRIBED:
             return self.north_pole.imag + half
-        elif self.image_type == LensImageType.DOUBLE_INSCRIBED:
+        elif self.image_type == CameraImageType.DOUBLE_INSCRIBED:
             return self.north_pole.imag + half
         return self.north_pole.imag + half
 
@@ -196,7 +196,7 @@ class LensImage:
     def get_from_spherical(self, latitude: float, longitude: float) -> uint8[:]:
         pos1, pos2 = self.translate_spherical_to_cartesian(latitude, longitude)
         try:
-            if self.image_type != LensImageType.DOUBLE_INSCRIBED:
+            if self.image_type != CameraImageType.DOUBLE_INSCRIBED:
                 return self.get_from_cartesian(*_2ints(*pos1))
             else:  # DOUBLE_INSCRIBED
                 r_value = self._ds_get_from_spherical(latitude, pos1, pos2)
@@ -236,7 +236,7 @@ class LensImage:
         :return: None
         """
         try:
-            if not self.image_type == LensImageType.DOUBLE_INSCRIBED:
+            if not self.image_type == CameraImageType.DOUBLE_INSCRIBED:
                 pos1, _ = self.translate_spherical_to_cartesian(latitude, longitude)
                 if pos1 != INVALID_POSITION:
                     self.set_to_cartesian(*_2ints(*pos1), data)
@@ -260,7 +260,7 @@ class LensImage:
         :return:
         """
 
-        if self.image_type != LensImageType.DOUBLE_INSCRIBED:
+        if self.image_type != CameraImageType.DOUBLE_INSCRIBED:
             polar_distance = self.lens(np.pi / 2 - latitude, False) * self.dpf
             factors = np.exp(longitude * 1j)
             relative_position = factors * polar_distance
@@ -302,7 +302,7 @@ class LensImage:
     ) -> Tuple[float, float]:
         max_latitude = np.pi / 2
         min_latitude = max_latitude - self.fov / 2
-        if self.image_type == LensImageType.DOUBLE_INSCRIBED:
+        if self.image_type == CameraImageType.DOUBLE_INSCRIBED:
             min_latitude = -max_latitude
 
         absolute_position = complex(x, y)
@@ -320,7 +320,7 @@ class LensImage:
             latitude = min_latitude + self.lens(magnitude / self.dpf, True)
 
         if (
-            self.image_type == LensImageType.DOUBLE_INSCRIBED
+            self.image_type == CameraImageType.DOUBLE_INSCRIBED
             and reference_point == self.south_pole
         ):
             relative_position = complex(
@@ -348,7 +348,7 @@ class LensImage:
         x = absolute_position.real
 
         reference_point = self.north_pole
-        if self.image_type == LensImageType.DOUBLE_INSCRIBED:
+        if self.image_type == CameraImageType.DOUBLE_INSCRIBED:
             halfway_x = self.image.shape[1] / 2
             if x >= halfway_x:
                 reference_point = self.south_pole

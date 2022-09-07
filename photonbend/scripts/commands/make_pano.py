@@ -1,18 +1,23 @@
 #  Copyright (c) 2022. Edson Moreira
 #
-#  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-#  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
-#  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
-#  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  The above copyright notice and this permission notice shall be included in all copies or substantial portions of
-#  the Software.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
 #
-#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-#  BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-#  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-#  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#  SOFTWARE.
+
 
 import sys
 from pathlib import Path
@@ -22,56 +27,27 @@ import click
 import numpy as np
 from PIL import Image
 
-from photonbend.core._discontinued.lens_image_type import LensImageType
-from photonbend.core._discontinued.sphere_image import SphereImage
-from photonbend.projections.equirectangular import make_projection, compute_best_width
-from photonbend.lens import (
-    equisolid,
-    rectilinear,
-    equidistant,
-    orthographic,
-    stereographic,
-)
 from photonbend.utils import to_radians
-from .shared import (
+from . import (
+    _verify_output_path,
+    _calculate_magnitude,
+    _process_image_type,
+    _process_lens,
+    _open_image,
+    CamImgTypeStr,
+    CamLensStr,
     lens_choices,
     type_choices,
     type_choices_help,
     double_type_fov_warning,
     rotation_help,
+    _process_fov,
 )
+from photonbend.core.projection import CameraImage, PanoramaImage
+from photonbend.core.rotation import Rotation
 
 
-def _check_fov(fov: float, image_type: LensImageType):
-    if image_type is LensImageType.DOUBLE_INSCRIBED and fov < 180:
-        raise ValueError("The fov of a double image can't be smaller than 180 degrees.")
-    if fov > 360:
-        raise ValueError("The fov of an image can't be higher than 360 degrees.")
-    r_fov = to_radians(fov)
-    return r_fov
-
-
-def check_output(output: Path):
-    out = Path(output)
-    if not (out.suffix.lower() in [".jpg", ".jpeg", ".png"]):
-        print("The desired output image should be a JPG or PNG file.")
-        print(
-            "Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)"
-        )
-        print("Exiting!")
-        sys.exit(1)
-    if out.exists():
-        while True:
-            ans = input("File already exists. Overwrite? (y/n) ")
-            if ans in ["y", "n"]:
-                break
-        if ans == "n":
-            print("Exiting!")
-            sys.exit(0)
-    return out
-
-
-@click.argument("input_image", type=click.Path(exists=True))
+@click.argument("input_image", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--type",
     required=True,
@@ -107,13 +83,13 @@ def check_output(output: Path):
     default=(0, 0, 0),
     help=rotation_help,
 )
-@click.argument("output_image", type=click.Path(exists=False))
+@click.argument("output_image", type=click.Path(exists=False, path_type=Path))
 def make_pano(
-    input_image: click.Path,
-    type: str,
-    lens: str,
+    input_image: Path,
+    type: CamImgTypeStr,
+    lens: CamLensStr,
     fov: float,
-    output_image: click.Path,
+    output_image: Path,
     ssample: int,
     rotation: Tuple[float, float, float],
 ) -> None:
@@ -123,52 +99,35 @@ def make_pano(
     INPUT is the path to the source photo.
     OUTPUT is the desired path of the destiny panorama.
     """
-    out = check_output(output_image)
+    out = _verify_output_path(output_image)
 
-    types_dict = {
-        "inscribed": LensImageType.INSCRIBED,
-        "double": LensImageType.DOUBLE_INSCRIBED,
-        "cropped": LensImageType.CROPPED_CIRCLE,
-        "full": LensImageType.FULL_FRAME,
-    }
+    # Opens the image or finish the application if there is no image
+    source_array = _open_image(input_image)
+    source_type = _process_image_type(type)
+    source_lens = _process_lens(lens)
+    source_magnitude = _calculate_magnitude(source_type, source_array.shape)
+    source_fov = _process_fov(fov, source_type)
+    source_image = CameraImage(
+        source_array, source_fov, source_lens, magnitude=source_magnitude
+    )
+    s_height, s_width, _ = source_array.shape
 
-    lens_types = {
-        "equidistant": equidistant,
-        "equisolid": equisolid,
-        "orthographic": orthographic,
-        "rectilinear": rectilinear,
-        "stereographic": stereographic,
-    }
-
-    source_lens = lens_types[lens]
-    source_type = types_dict[type]
-    source_fov = _check_fov(fov, source_type)
-
-    try:
-        with Image.open(input_image) as image:
-            source_array = np.asarray(image)
-    except IOError:
-        print("Error: Input image could not be opened!")
-        print("Exiting!")
-        sys.exit(1)
-
-    source_sphere = SphereImage(source_array, source_type, source_fov, source_lens)
+    destiny_shape = (s_height, int(s_width * 2), 3)
+    destiny_array = np.zeros(destiny_shape, np.uint8)
+    destiny_image = PanoramaImage(destiny_array)
+    destiny_map = destiny_image.get_coordinate_map()
 
     if rotation != (0, 0, 0):
-        rotation_rad = list(map(to_radians, rotation))
-        pitch, yaw, roll = rotation_rad
-        source_sphere.set_rotation(pitch, yaw, roll)
+        rad_rotation = tuple(map(to_radians, rotation))
+        rotation_transform = Rotation(*rad_rotation)
+        destiny_map = rotation_transform.rotate_coordinate_map(destiny_map)
 
-    width = compute_best_width(source_sphere)
-
-    destiny_arr = make_projection(source_sphere, 0, width)
-    destiny_image = Image.fromarray(destiny_arr)
-    print("Finished!")
+    mapped_array = source_image.process_coordinate_map(destiny_map)
+    mapped_image = Image.fromarray(mapped_array)
 
     try:
-        destiny_image.save(output_image)
+        mapped_image.save(out)
     except IOError:
         print("Could not save to the specified location!")
-        print("Exiting!")
         print("Exiting!")
         sys.exit(1)

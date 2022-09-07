@@ -18,8 +18,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-__doc__ = (
-    """This module has the lens class and using it, it defines many lenses that
+__doc__ = """This module has the lens class and using it, it defines many lenses that
     are available.
 
     It defines the **UniFloat** type. For all intents and purposes, this type
@@ -30,7 +29,6 @@ __doc__ = (
     * Return a *float* when given one.
     * Return a *npt.NDArray[float]* when given one.
     """
-)
 
 from dataclasses import dataclass
 
@@ -46,7 +44,7 @@ UniFloat = TypeVar("UniFloat", float, npt.NDArray[np.float64])
 
 @dataclass
 class Lens:
-    """Represents a lens with both forward and reverse functions
+    """Represents a lens with both forward and reverse functions.
 
     Attributes:
         forward_function (Callable[[UniFloat], UniFloat]): A function that given
@@ -73,7 +71,7 @@ def _rectilinear_inverse(
 
 # TODO fix this function so it works with numpy arrays
 def _rectilinear(theta: UniFloat) -> UniFloat:
-    """Mapping that uses the angle tangent
+    """Mapping that uses the angle tangent.
 
     As it uses the angle tangent, it should not be used with lens angles closing on 180
     degrees. It is best to limit its use to lens angles of at most 165 degrees.
@@ -94,7 +92,7 @@ def _rectilinear(theta: UniFloat) -> UniFloat:
 
 
 def _stereographic_inverse(projection_in_f_units: UniFloat) -> UniFloat:
-    """Inverse stereographic function
+    """Inverse stereographic function.
 
     As an inverse lens function, it takes a distance from the center of
     the image in focal units and returns the incidence angle in radians
@@ -116,7 +114,7 @@ def _stereographic_inverse(projection_in_f_units: UniFloat) -> UniFloat:
 
 
 def _stereographic(theta: UniFloat) -> UniFloat:
-    """The stereographic function
+    """The stereographic function.
 
     As a lens function, it takes an incidence angle and returns a
     distance from the center of the image such angle would be projected
@@ -137,7 +135,7 @@ def _stereographic(theta: UniFloat) -> UniFloat:
 
 
 def _equidistant_inverse(projection_in_f_units: UniFloat) -> UniFloat:
-    """The inverse equidistant function
+    """The inverse equidistant function.
 
     As an inverse lens function, it takes a distance from the center of
     the image in focal units and returns the incidence angle in radians
@@ -158,7 +156,7 @@ def _equidistant_inverse(projection_in_f_units: UniFloat) -> UniFloat:
 
 # @nb.vectorize
 def _equidistant(theta: UniFloat) -> UniFloat:
-    """The equidistant function
+    """The equidistant function.
 
     As a lens function, it takes an incidence angle and returns a
     distance from the center of the image such angle would be projected
@@ -180,7 +178,7 @@ def _equidistant(theta: UniFloat) -> UniFloat:
 
 # @nb.vectorize
 def _equisolid_inverse(projection_in_f_units: UniFloat) -> UniFloat:
-    """The inverse equisolid function
+    """The inverse equisolid function.
 
     As an inverse lens function, it takes a distance from the center of
     the image in focal units and returns the incidence angle in radians
@@ -213,7 +211,7 @@ def _equisolid_inverse(projection_in_f_units: UniFloat) -> UniFloat:
 
 # @nb.vectorize
 def _equisolid(theta: UniFloat) -> UniFloat:
-    """The equisolid function
+    """The equisolid function.
 
     As a lens function, it takes an incidence angle and returns a
     distance from the center of the image such angle would be projected
@@ -236,7 +234,7 @@ def _equisolid(theta: UniFloat) -> UniFloat:
 
 # @nb.vectorize
 def _orthographic_inverse(projection_in_f_units: UniFloat) -> UniFloat:
-    """The inverse orthographic function
+    """The inverse orthographic function.
 
     As an inverse lens function, it takes a distance from the center of
     the image in focal units and returns the incidence angle in radians
@@ -255,7 +253,7 @@ def _orthographic_inverse(projection_in_f_units: UniFloat) -> UniFloat:
 
 # @nb.vectorize
 def _orthographic(theta: UniFloat) -> UniFloat:
-    """The orthgraphic function
+    """The orthgraphic function.
 
     As a lens function, it takes an incidence angle and returns a
     distance from the center of the image such angle would be projected
@@ -279,7 +277,7 @@ def _orthographic(theta: UniFloat) -> UniFloat:
 
 # @nb.vectorize
 def _thoby_inverse(projection_in_f_units: UniFloat) -> UniFloat:
-    """The inverse thoby function
+    """The inverse thoby function.
 
     As an inverse lens function, it takes a distance from the center of
     the image in focal units and returns the incidence angle in radians
@@ -302,7 +300,7 @@ def _thoby_inverse(projection_in_f_units: UniFloat) -> UniFloat:
 
 # @nb.vectorize
 def _thoby(theta: UniFloat) -> UniFloat:
-    """The thoby function
+    """The thoby function.
 
     As a lens function, it takes an incidence angle and returns a
     distance from the center of the image such angle would be projected
@@ -330,32 +328,65 @@ def _thoby(theta: UniFloat) -> UniFloat:
 
 
 def rectilinear() -> Lens:
-    """Returns a rectilinear lens"""
+    r"""Returns a rectilinear lens.
+
+    Functions are:
+    * $f(\theta) = \tan(\theta)$
+    * $f(projection) = \arctan(projection)$
+    """
     return Lens(_rectilinear, _rectilinear_inverse)
 
 
 def equisolid() -> Lens:
-    """Returns an equisolid lens"""
+    r"""Returns an equisolid lens.
+
+    Functions are:
+    * $f(\theta) = 2 \times \sin(\frac{\theta}{2})$
+    * $f(projection) = 2 \times \arcsin(\frac{projection}{2})$
+    """
     return Lens(_equisolid, _equisolid_inverse)
 
 
 def equidistant() -> Lens:
-    """Returns an equidistant lens"""
+    r"""Returns an equidistant lens.
+
+    Functions are:
+    * $f(\theta) = \theta$
+    * $f(projection) = projection$
+
+    Both are a simple identity function.
+    """
     return Lens(_equidistant, _equidistant_inverse)
 
 
 def orthographic() -> Lens:
-    """Returns an orthographic lens"""
+    r"""Returns an orthographic lens.
+
+    Functions are:
+    * $f(\theta) = \sin(\theta)$
+    * $f(projection) = \arcsin(projection)$
+    """
     return Lens(_orthographic, _orthographic_inverse)
 
 
 def stereographic() -> Lens:
-    """Returns a stereographic lens"""
+    r"""Returns a stereographic lens
+
+    Functions are:
+    * $f(\theta) = 2 \times \tan(\frac{\theta}{2})$
+    * $f(projection) = 2\times \arctan(\frac{projection}{2})$
+    """
     return Lens(_stereographic, _stereographic_inverse)
 
 
 def thoby() -> Lens:
-    """Returns a thoby lens"""
+    r"""Returns a thoby lens.
+    Functions are:
+
+    * $f(\theta) = 1.47 \times \sin(0.713 \times \theta)$
+
+    * $f(projection) = \frac{\arcsin(\frac{projection}{1.47})}{0.713}$
+    """
     return Lens(_thoby, _thoby_inverse)
 
 

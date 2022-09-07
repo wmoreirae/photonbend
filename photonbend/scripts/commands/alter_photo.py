@@ -1,26 +1,23 @@
 #  Copyright (c) 2022. Edson Moreira
 #
-#  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-#  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
-#  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
-#  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  The above copyright notice and this permission notice shall be included in all copies or substantial portions of
-#  the Software.
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
 #
-#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-#  BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-#  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-#  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#  SOFTWARE.
 
-#
-#  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-#  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
-#  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
-#  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-#
-#
 import sys
 from pathlib import Path
 from typing import Tuple
@@ -29,55 +26,27 @@ import click
 import numpy as np
 from PIL import Image
 
-from photonbend.core._discontinued.lens_image_type import LensImageType
-from photonbend.core._discontinued.sphere_image import SphereImage
-from photonbend.lens import (
-    equisolid,
-    rectilinear,
-    equidistant,
-    orthographic,
-    stereographic,
-)
 from photonbend.utils import to_radians
-from .shared import (
+from . import (
+    _verify_output_path,
+    _calculate_magnitude,
+    _process_image_type,
+    _process_lens,
+    _open_image,
+    CamImgTypeStr,
+    CamLensStr,
     lens_choices,
     type_choices,
     type_choices_help,
     double_type_fov_warning,
     rotation_help,
+    _process_fov,
 )
+from photonbend.core.projection import CameraImage
+from photonbend.core.rotation import Rotation
 
 
-def _check_fov(fov: float, image_type: LensImageType):
-    if image_type is LensImageType.DOUBLE_INSCRIBED and fov < 180:
-        raise ValueError("The fov of a double image can't be smaller than 180 degrees.")
-    if fov > 360:
-        raise ValueError("The fov of an image can't be higher than 360 degrees.")
-    r_fov = to_radians(fov)
-    return r_fov
-
-
-def check_output(output: Path):
-    out = Path(output)
-    if not (out.suffix.lower() in [".jpg", ".jpeg", ".png"]):
-        print("The desired output image should be a JPG or PNG file.")
-        print(
-            "Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)"
-        )
-        print("Exiting!")
-        sys.exit(1)
-    if out.exists():
-        while True:
-            ans = input("File already exists. Overwrite? (y/n) ")
-            if ans in ["y", "n"]:
-                break
-        if ans == "n":
-            print("Exiting!")
-            sys.exit(0)
-    return out
-
-
-@click.argument("input_image", type=click.Path(exists=True))
+@click.argument("input_image", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--itype",
     required=True,
@@ -122,7 +91,7 @@ def check_output(output: Path):
     help="The ammount of supersampling applied (ss²)",
     default=1,
 )
-@click.argument("output_image", type=click.Path(exists=False))
+@click.argument("output_image", type=click.Path(exists=False, path_type=Path))
 @click.option(
     "-r",
     "--rotation",
@@ -133,14 +102,14 @@ def check_output(output: Path):
     help=rotation_help,
 )
 def alter_photo(
-    input_image: click.Path,
-    itype: str,
-    ilens: str,
+    input_image: Path,
+    itype: CamImgTypeStr,
+    ilens: CamLensStr,
     ifov: float,
-    otype: str,
-    olens: str,
+    otype: CamImgTypeStr,
+    olens: CamLensStr,
     ofov: float,
-    output_image: click.Path,
+    output_image: Path,
     ssample: int,
     rotation: Tuple[float, float, float],
 ) -> None:
@@ -150,67 +119,56 @@ def alter_photo(
     INPUT is the path to the source photo.
     OUTPUT is the desired path of the destiny photo.
     """
-    out = check_output(output_image)
+    out = _verify_output_path(output_image)
 
-    types_dict = {
-        "inscribed": LensImageType.INSCRIBED,
-        "double": LensImageType.DOUBLE_INSCRIBED,
-        "cropped": LensImageType.CROPPED_CIRCLE,
-        "full": LensImageType.FULL_FRAME,
-    }
+    # Opens the image or finish the application if there is no image
+    source_array = _open_image(input_image)
+    source_type = _process_image_type(itype)
+    source_lens = _process_lens(ilens)
+    source_magnitude = _calculate_magnitude(source_type, source_array.shape)
+    source_fov = _process_fov(ifov, source_type)
+    source_image = CameraImage(
+        source_array, source_fov, source_lens, magnitude=source_magnitude
+    )
 
-    lens_types = {
-        "equidistant": equidistant,
-        "equisolid": equisolid,
-        "orthographic": orthographic,
-        "rectilinear": rectilinear,
-        "stereographic": stereographic,
-    }
+    destiny_shape = source_array.shape  # TODO define a function to choose a good size
+    destiny_array = np.zeros(destiny_shape, np.uint8)
+    destiny_type = _process_image_type(otype)
+    destiny_lens = _process_lens(olens)
+    destiny_magnitude = _calculate_magnitude(destiny_type, source_array.shape)
+    destiny_fov = _process_fov(ofov, destiny_type)
 
-    source_lens = lens_types[ilens]
-    source_type = types_dict[itype]
-    source_fov = _check_fov(ifov, source_type)
+    # TODO check this old code to see what it does
+    # It seems to be a code to choose a good shape for the destiny array
+    #
+    # if (
+    #     source_type is not destiny_type
+    # ) and destiny_type is CameraImageType.DOUBLE_INSCRIBED:
+    #     y, x, c = source_array.shape
+    #     destiny_array = np.zeros((y, x * 2, c), np.uint8)
+    # elif (
+    #     source_type is not destiny_type
+    # ) and source_type is CameraImageType.DOUBLE_INSCRIBED:
+    #     y, x, c = source_array.shape
+    #     destiny_array = np.zeros((y, x // 2, c), np.uint8)
+    # else:
+    #     destiny_array = np.zeros(source_array.shape, np.uint8)
 
-    destiny_lens = lens_types[olens]
-    destiny_type = types_dict[otype]
-    destiny_fov = _check_fov(ofov, destiny_type)
-
-    try:
-        with Image.open(input_image) as image:
-            source_array = np.asarray(image)
-    except IOError:
-        print("Error: Input image could not be opened!")
-        print("Exiting!")
-        sys.exit(1)
-
-    source_sphere = SphereImage(source_array, source_type, source_fov, source_lens)
-
-    if (
-        source_type is not destiny_type
-    ) and destiny_type is LensImageType.DOUBLE_INSCRIBED:
-        y, x, c = source_array.shape
-        destiny_array = np.zeros((y, x * 2, c), np.core.uint8)
-    elif (
-        source_type is not destiny_type
-    ) and source_type is LensImageType.DOUBLE_INSCRIBED:
-        y, x, c = source_array.shape
-        destiny_array = np.zeros((y, x // 2, c), np.core.uint8)
-    else:
-        destiny_array = np.zeros(source_array.shape, np.core.uint8)
-
-    destiny_sphere = SphereImage(destiny_array, destiny_type, destiny_fov, destiny_lens)
+    destiny_image = CameraImage(
+        destiny_array, destiny_fov, destiny_lens, magnitude=destiny_magnitude
+    )
+    destiny_map = destiny_image.get_coordinate_map()
 
     if rotation != (0, 0, 0):
-        rotation_rad = list(map(to_radians, rotation))
-        pitch, yaw, roll = rotation_rad
-        source_sphere.set_rotation(pitch, yaw, roll)
+        rad_rotation = tuple(map(to_radians, rotation))
+        rotation_transform = Rotation(*rad_rotation)
+        destiny_map = rotation_transform.rotate_coordinate_map(destiny_map)
 
-    destiny_sphere.map_from_sphere_image(source_sphere, ssample)
-    destiny_arr = destiny_sphere.get_image_array()
-    destiny_image = Image.fromarray(destiny_arr)
+    mapped_array = source_image.process_coordinate_map(destiny_map)
+    mapped_image = Image.fromarray(mapped_array)
 
     try:
-        destiny_image.save(output_image)
+        mapped_image.save(out)
     except IOError:
         print("Could not save to the specified location!")
         print("Exiting!")

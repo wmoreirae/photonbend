@@ -42,7 +42,7 @@ class ProjectionImage(Protocol):
     @abstractmethod
     def process_coordinate_map(
         self, coordinate_map: npt.NDArray[np.float64]
-    ) -> npt.NDArray[np.int8]:
+    ) -> npt.NDArray[np.uint8]:
         ...
 
 
@@ -66,7 +66,7 @@ class CameraImage(ProjectionImage):
 
     def __init__(
         self,
-        image_arr: npt.NDArray[np.int8],
+        image_arr: npt.NDArray[np.uint8],
         fov: float,
         lens: Lens,
         magnitude: Union[None, float] = None,
@@ -165,7 +165,7 @@ class CameraImage(ProjectionImage):
     # Protocol implementation
     def process_coordinate_map(
         self, coordinate_map: npt.NDArray[np.float64]
-    ) -> npt.NDArray[np.int8]:
+    ) -> npt.NDArray[np.uint8]:
         """Produces a new image based on a coordinate map.
 
         Process a given coordinate map and maps each of its coordinates to a
@@ -214,7 +214,7 @@ class PanoramaImage(ProjectionImage):
             (height, width, 3).
     """
 
-    def __init__(self, image_arr: npt.NDArray[np.int8]) -> None:
+    def __init__(self, image_arr: npt.NDArray[np.uint8]) -> None:
         """Initializes instance attributes
 
         Args:
@@ -254,7 +254,7 @@ class PanoramaImage(ProjectionImage):
 
     def process_coordinate_map(
         self, coordinate_map: npt.NDArray[np.float64]
-    ) -> npt.NDArray[np.int8]:
+    ) -> npt.NDArray[np.uint8]:
         """Produces a new image based on a coordinate maps.
 
         Process a given coordinate map and maps each of its coordinates  to a
@@ -289,7 +289,7 @@ class PanoramaImage(ProjectionImage):
 
 def map_projection(
     coordinate_map: npt.NDArray[np.float64],
-) -> npt.NDArray[np.int8]:
+) -> npt.NDArray[np.uint8]:
     """Converts a coordinate map to a color map.
 
     Converts a coordinate to a RGB color map so that we can see the projection.
