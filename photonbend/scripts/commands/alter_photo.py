@@ -160,10 +160,7 @@ def alter_photo(
     )
     destiny_map = destiny_image.get_coordinate_map()
 
-    print(rotation)
-
     for rot in rotation:
-        print(rot)
         rad_rotation = tuple(map(to_radians, rot))
         rotation_transform = Rotation(*rad_rotation)
         destiny_map = rotation_transform.rotate_coordinate_map(destiny_map)

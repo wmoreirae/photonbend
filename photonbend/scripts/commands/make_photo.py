@@ -21,7 +21,7 @@
 
 import sys
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List
 
 import click
 import numpy as np
@@ -81,8 +81,9 @@ from photonbend.utils import calculate_size_panorama_to_photo
     required=False,
     type=click.FLOAT,
     nargs=3,
-    default=(0, 0, 0),
+    default=[],
     help=rotation_help,
+    multiple=True,
 )
 @click.argument("output_image", type=click.Path(exists=False, path_type=Path))
 def make_photo(
@@ -92,7 +93,7 @@ def make_photo(
     fov: float,
     output_image: Path,
     ssample: int,
-    rotation: Tuple,
+    rotation: List[Tuple[float, float, float]]
 ) -> None:
     """Make a photo out of a panorama.
 
@@ -120,8 +121,8 @@ def make_photo(
     )
     destiny_map = destiny_image.get_coordinate_map()
 
-    if rotation != (0, 0, 0):
-        rad_rotation = tuple(map(to_radians, rotation))
+    for rot in rotation:
+        rad_rotation = tuple(map(to_radians, rot))
         rotation_transform = Rotation(*rad_rotation)
         destiny_map = rotation_transform.rotate_coordinate_map(destiny_map)
 

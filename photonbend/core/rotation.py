@@ -159,6 +159,8 @@ class Rotation:
         translated_xz = make_complex(
             new_position_vector[:, :, 0], new_position_vector[:, :, 2]
         )
+
+        # TODO Check if warning suppression is needed here
         translated_longitude = np.log(translated_xz).imag
 
         translated_latitude = np.expand_dims(translated_latitude, axis=2)

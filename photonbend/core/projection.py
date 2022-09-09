@@ -284,10 +284,10 @@ class DoubleCameraImage(ProjectionImage):
         Returns:
             A numpy array of float64 as a coordinate map.
         """
-        pass
+        raise NotImplementedError()
 
     def process_coordinate_map(self, coordinate_map: npt.NDArray[np.float64]) -> npt.NDArray[np.uint8]:
-        pass
+        raise NotImplementedError()
 
 
 class PanoramaImage(ProjectionImage):
