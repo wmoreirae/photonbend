@@ -10,7 +10,6 @@ readme = "README.md"
 python = "^3.8"
 Pillow = "^9.0.1"
 numpy = "^1.18"
-# numba = "^0.55.1"
 scipy = "^1.8.0"
 click = "^8.0.4"
 

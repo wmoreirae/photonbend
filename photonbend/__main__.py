@@ -17,10 +17,8 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
-import os
 
 from .scripts.main import main
 
 if __name__ == "__main__":
-    os.environ["NUMBA_DISABLE_PERFORMANCE_WARNINGS"] = "1"
     main()
