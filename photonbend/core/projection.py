@@ -214,7 +214,7 @@ class CameraImage(ProjectionImage):
             balanced_position_x,
         ]
 
-        # sets all pixels with detected bad coordinates to black
+        # sets all pixels with detected bad positions to black
         new_image_array[problem_positions_yx] = 0
 
         # set the invalid areas as set in the coordinate map to black

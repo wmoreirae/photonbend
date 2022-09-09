@@ -20,7 +20,7 @@
 
 import sys
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List
 
 import click
 import numpy as np
@@ -98,8 +98,9 @@ from photonbend.core.rotation import Rotation
     required=False,
     type=click.FLOAT,
     nargs=3,
-    default=(0, 0, 0),
+    default=[],
     help=rotation_help,
+    multiple=True,
 )
 def alter_photo(
     input_image: Path,
@@ -111,7 +112,7 @@ def alter_photo(
     ofov: float,
     output_image: Path,
     ssample: int,
-    rotation: Tuple[float, float, float],
+    rotation: List[Tuple[float, float, float]]
 ) -> None:
     """Change the the lens and FoV of a photo.
 
@@ -159,8 +160,11 @@ def alter_photo(
     )
     destiny_map = destiny_image.get_coordinate_map()
 
-    if rotation != (0, 0, 0):
-        rad_rotation = tuple(map(to_radians, rotation))
+    print(rotation)
+
+    for rot in rotation:
+        print(rot)
+        rad_rotation = tuple(map(to_radians, rot))
         rotation_transform = Rotation(*rad_rotation)
         destiny_map = rotation_transform.rotate_coordinate_map(destiny_map)
 
