@@ -97,7 +97,7 @@ class Rotation:
             yaw (float): rotation measured in radians in the yaw axis.
             roll (float): rotation measured in radians in the roll axis.
         """
-        self.rotation_matrix = _calculate_rotation_matrix(pitch, yaw, roll)
+        self.rotation_matrix = _calculate_rotation_matrix(-pitch, -yaw, -roll)
 
     def rotate_coordinate_map(
         self, coordinate_map: npt.NDArray[np.float64]
