@@ -93,7 +93,7 @@ def make_photo(
     fov: float,
     output_image: Path,
     ssample: int,
-    rotation: List[Tuple[float, float, float]]
+    rotation: List[Tuple[float, float, float]],
 ) -> None:
     """Make a photo out of a panorama.
 

@@ -112,7 +112,7 @@ def alter_photo(
     ofov: float,
     output_image: Path,
     ssample: int,
-    rotation: List[Tuple[float, float, float]]
+    rotation: List[Tuple[float, float, float]],
 ) -> None:
     """Change the the lens and FoV of a photo.
 
