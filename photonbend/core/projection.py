@@ -40,7 +40,7 @@ class ProjectionImage(Protocol):
 
     @abstractmethod
     def process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.float64]
+            self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
         ...
 
@@ -64,11 +64,11 @@ class CameraImage(ProjectionImage):
     """
 
     def __init__(
-        self,
-        image_arr: npt.NDArray[np.uint8],
-        fov: float,
-        lens: Lens,
-        magnitude: Union[None, float] = None,
+            self,
+            image_arr: npt.NDArray[np.uint8],
+            fov: float,
+            lens: Lens,
+            magnitude: Union[None, float] = None,
     ):
         """Initializes instance attributes.
         Args:
@@ -118,10 +118,10 @@ class CameraImage(ProjectionImage):
 
         :return: float
         """
-        maximum_lens_angle = self.fov / 2
-        maximum_image_magnitude = self.magnitude
-        lens_max_angle_magnitude = self.forward_lens(maximum_lens_angle)
-        return maximum_image_magnitude / lens_max_angle_magnitude
+        maximum_incidence_angle = self.fov / 2
+        max_magnitude_in_pixels = self.magnitude
+        max_projection_distance_in_f_units = self.forward_lens(maximum_incidence_angle)
+        return max_magnitude_in_pixels / max_projection_distance_in_f_units
 
     # Protocol implementation
     def get_coordinate_map(self) -> npt.NDArray[np.float64]:
@@ -136,9 +136,22 @@ class CameraImage(ProjectionImage):
         Returns:
             A numpy array of float64 as a coordinate map.
         """
+        latitude, longitude = self._compute_latitude_longitude()
+        invalid = latitude > self.fov / 2
+
+        latitude = latitude.reshape(*latitude.shape, 1)
+        longitude = longitude.reshape(*longitude.shape, 1)
+
+        invalid_float = invalid.astype(np.float64)
+        invalid_float = np.expand_dims(invalid_float, axis=2)
+
+        coordinate_map = np.concatenate([latitude, longitude, invalid_float], 2)
+        return coordinate_map
+
+    def _compute_latitude_longitude(self) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         o_height, o_width = self.image.shape[:2]
 
-        # making of the mesh
+        # making a the mesh to represent the pixel coordinates
         x_axis_range = np.linspace(-o_width / 2 + 0.5, o_width / 2 - 0.5, num=o_width)
         y_axis_range = np.linspace(
             o_height / 2 - 0.5, -o_height / 2 + 0.5, num=o_height
@@ -147,23 +160,20 @@ class CameraImage(ProjectionImage):
             y_axis_range, x_axis_range, sparse=True, indexing="ij"
         )
 
-        distance_mesh = np.sqrt(mesh_x**2 + mesh_y**2) / self.f_distance
+        # uses euclidean distance to compute pixel distances from the center
+        distance_mesh = np.sqrt(mesh_x ** 2 + mesh_y ** 2) / self.f_distance
+
+        # uses the reverse lens function to get an angle of incidence for each pixel
         latitude: npt.NDArray[np.float64] = self.reverse_lens(distance_mesh)
+
+        # uses complex math to get the angle as used when using polar coordinates on the
+        # cartesian plane
         longitude = np.log(make_complex(mesh_x, mesh_y)).imag
-
-        latitude = latitude.reshape(*latitude.shape, 1)
-        longitude = longitude.reshape(*longitude.shape, 1)
-        invalid = distance_mesh > self.forward_lens(self.fov / 2)
-
-        invalid_float = invalid.astype(np.float64)
-        invalid_float = np.expand_dims(invalid_float, axis=2)
-
-        polar_coordinates = np.concatenate([latitude, longitude, invalid_float], 2)
-        return polar_coordinates
+        return latitude, longitude
 
     # Protocol implementation
     def process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.float64]
+            self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
         """Produces a new image based on a coordinate map.
 
@@ -182,41 +192,30 @@ class CameraImage(ProjectionImage):
         height, width = self.image.shape[:2]
 
         invalid_map = coordinate_map[:, :, 2] != 0.0
-        polar_map = coordinate_map[:, :, :2]
+        latitude = coordinate_map[:, :, 0]
+        longitude = coordinate_map[:, :, 1]
 
-        image_center = np.array(self.image.shape[:2]) / 2 - 0.5
-
-        # Use valid values for the calculation. Must clean up later on!
-        polar_map[invalid_map] = 0
-
-        distance = self.forward_lens(polar_map[:, :, 0]) * self.f_distance
-        unbalanced_position = np.exp(polar_map[:, :, 1] * 1j) * distance
-
-        # calculates the balanced positions
-        balanced_position_y = (
-            (unbalanced_position.imag * (-1)) + image_center[0]
-        ).astype(int)
-        balanced_position_x = (unbalanced_position.real + image_center[1]).astype(int)
+        positions_x, positions_y = self._make_cartesian_map(latitude, longitude)
 
         # removes bad positions in y
         problem_positions_y = np.logical_or(
-            balanced_position_y >= height, balanced_position_y < 0
+            positions_y >= height, positions_y < 0
         )
-        balanced_position_y[problem_positions_y] = 0
+        positions_y[problem_positions_y] = 0
 
         # removes bad positions in x
         problem_positions_x = np.logical_or(
-            balanced_position_x >= width, balanced_position_x < 0
+            positions_x >= width, positions_x < 0
         )
-        balanced_position_x[problem_positions_x] = 0
+        positions_x[problem_positions_x] = 0
 
         # makes a simplified map to set all bad positions to black
         problem_positions_yx = np.logical_or(problem_positions_y, problem_positions_x)
 
         # makes a new image
         new_image_array = self.image[
-            balanced_position_y,
-            balanced_position_x,
+            positions_y,
+            positions_x,
         ]
 
         # sets all pixels with detected bad positions to black
@@ -227,13 +226,40 @@ class CameraImage(ProjectionImage):
 
         return new_image_array
 
+    def _make_cartesian_map(self, latitude, longitude):
+        image_center = self._get_image_center()
+        # Use valid values for the calculation. Must clean up later on!
+        # lat_long_map[invalid_map] = 0
+        distance = self.forward_lens(latitude) * self.f_distance
+        unbalanced_cartesian_position = np.exp(longitude * 1j) * distance
+        # calculates the balanced positions
+        balanced_position_y = (
+                (unbalanced_cartesian_position.imag * (-1)) + image_center[0]
+        ).astype(int)
+        balanced_position_x = (unbalanced_cartesian_position.real + image_center[1]).astype(int)
+        return balanced_position_x, balanced_position_y
+
+    def _get_image_center(self):
+        """Gets the image center
+
+        Even though pixels have an area, when dealing with them on the computer, they
+        seem to be a point-like entity, residing on a specific position, like [1,1] or
+        [1,2].
+        A [2,2] image for example, have points one distributed like [0,0], [0,1], [1,0]
+        and [1,1]. Knowing that fact, it seems clear that the middle should be
+        [0.5, 0.5]. This method does that so that you don't have to remember the
+        details.
+        """
+
+        return np.array(self.image.shape[:2]) / 2 - 0.5
+
 
 class DoubleCameraImage(ProjectionImage):
     def __init__(
-        self,
-        image_arr: npt.NDArray[np.uint8],
-        sensor_fov: float,
-        lens: Lens,
+            self,
+            image_arr: npt.NDArray[np.uint8],
+            sensor_fov: float,
+            lens: Lens,
     ):
         """Initializes instance attributes.
         Args:
@@ -248,6 +274,7 @@ class DoubleCameraImage(ProjectionImage):
         self.image = image_arr
         self.sensor_fov = sensor_fov
 
+        self.lens = lens
         self.forward_lens = lens.forward_function
         self.reverse_lens = lens.reverse_function
         self.magnitude = self.image.shape[0] / 2.0
@@ -289,23 +316,11 @@ class DoubleCameraImage(ProjectionImage):
             A numpy array of float64 as a coordinate map.
         """
 
+        latitude, longitude = self._compute_latitude_longitude()
         half_width = self.image.shape[1] // 2
-
-        # making of the meshes
-        mesh_x, mesh_y = self._make_mesh()
-        distance_mesh = np.sqrt(mesh_x**2 + mesh_y**2) / self.f_distance
-
         # Maps the invalid areas
-        invalid_map = distance_mesh > self.forward_lens(self.sensor_fov / 2)
-
-        # computes latitudes
-        latitude: npt.NDArray[np.float64] = self.reverse_lens(distance_mesh)
-        # image on the right has descending latitude (starts at Pi and reduces)
-        latitude[:, half_width:] *= -1
-        latitude[:, half_width:] += np.pi
-
-        longitude = np.log(make_complex(mesh_x, mesh_y)).imag
-
+        invalid_map = latitude > self.sensor_fov / 2.0
+        invalid_map[:, half_width:] = latitude[:, half_width:] < np.pi - (self.sensor_fov / 2.0)
         latitude = latitude.reshape(*latitude.shape, 1)
         longitude = longitude.reshape(*longitude.shape, 1)
 
@@ -314,6 +329,22 @@ class DoubleCameraImage(ProjectionImage):
 
         polar_coordinates = np.concatenate([latitude, longitude, invalid_float], 2)
         return polar_coordinates
+
+    def _compute_latitude_longitude(self):
+        half_width = self.image.shape[1] // 2
+
+        # making of 2 meshes
+        mesh_x, mesh_y = self._make_mesh()
+        distance_mesh = np.sqrt(mesh_x ** 2 + mesh_y ** 2) / self.f_distance
+
+        # computes latitudes
+        latitude: npt.NDArray[np.float64] = self.reverse_lens(distance_mesh)
+
+        # image on the right has descending latitude (starts at Pi and reduces)
+        latitude[:, half_width:] *= -1
+        latitude[:, half_width:] += np.pi
+        longitude = np.log(make_complex(mesh_x, mesh_y)).imag
+        return latitude, longitude
 
     def _make_mesh(self) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         original_height, original_width = self.image.shape[:2]
@@ -338,94 +369,55 @@ class DoubleCameraImage(ProjectionImage):
         return mesh_x, mesh_y
 
     def process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.float64]
+            self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
-        left_map = self._process_coordinate_map(coordinate_map, right_image=False)
-        right_map = self._process_coordinate_map(coordinate_map, right_image=True)
-
-        intermediate_map = left_map + right_map
-        final_map = intermediate_map.astype(np.int8)
-        return final_map
-
-    def _process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.float64], right_image: bool
-    ) -> npt.NDArray[np.float64]:
         # Calculate the shape for half of the image horizontally
         real_height, real_width = self.image.shape[:2]
         height, width = real_height, real_width // 2
-        fov_overdata_ref = (self.sensor_fov/2) - (np.pi / 2)
-        fov_overdata_min = np.pi - fov_overdata_ref
-        fov_overdata_max = np.pi + fov_overdata_ref
+        fov_overdata_ref = (self.sensor_fov / 2) - (np.pi / 2)
+        fov_overdata_min = np.pi/2 - fov_overdata_ref
+        fov_overdata_max = np.pi/2 + fov_overdata_ref
+        fov_overdata_range = 2.0 * fov_overdata_ref
 
         # Get the data from the passed coordinate map
         invalid_map = coordinate_map[:, :, 2] != 0.0
-        polar_map = coordinate_map[:, :, :2]  # latitude and longitude in radians
 
-        image_center = np.array((height, width)) / 2 - 0.5
+        left_coordinate_map = coordinate_map
 
-        # Use valid values for the calculation. Must clean up later on!
-        polar_map[invalid_map] = 0
+        right_coordinate_map = np.copy(coordinate_map)
+        right_coordinate_map[:, :, 0] *= (-1)
+        right_coordinate_map[:, :, 0] += np.pi
 
-        # Separate latitude from longitude
-        latitude = polar_map[:, :, 0]
-        longitude = polar_map[:, :, 1]
-
-        # rest of the method should work with local image
-        local_image: npt.NDArray[np.int8]
-        x_reflection: int  # Used to control whether the X axis should be inverted
-        if not right_image:  # left image
-            local_image = self.image[:, :width]
-            x_reflection = 1
-        else:  # right image
-            local_image = self.image[:, width:]
-            x_reflection = -1
-            latitude = np.pi - latitude
-
-        distance = self.forward_lens(latitude) * self.f_distance
-        unbalanced_position = np.exp(longitude * 1j) * distance
-
-        balanced_position_y = (
-            (unbalanced_position.imag * (-1)) + image_center[0]
-        ).astype(
-            int
-        )  # -1 to invert Y axis
-        balanced_position_x = (
-            unbalanced_position.real * x_reflection + image_center[1]
-        ).astype(int)
-
-        # removes bad positions in y
-        problem_positions_y = np.logical_or(
-            balanced_position_y >= height, balanced_position_y < 0
-        )
-        balanced_position_y[problem_positions_y] = 0
-
-        # removes bad positions in x
-        problem_positions_x = np.logical_or(
-            balanced_position_x >= width, balanced_position_x < 0
-        )
-        balanced_position_x[problem_positions_x] = 0
-
-        # makes a simplified map to set all bad positions to black
-        problem_positions_yx = np.logical_or(problem_positions_y, problem_positions_x)
-
-        # get the pixels in the overdata area and define a multiplication factor
-        overdata_area = np.logical_and(latitude >= fov_overdata_min, latitude <= fov_overdata_max)
-        overdata_factor = np.ones((height, width, 1), np.float64)
+        left_image_data = self.image[:, :width]
+        right_image_data = np.copy(self.image[:, width:])
+        right_image_data = right_image_data[:, ::-1]
 
 
-        # makes a new image
-        new_image_array = local_image[
-            balanced_position_y,
-            balanced_position_x,
-        ]
+        left_cam_image = CameraImage(left_image_data, self.sensor_fov, self.lens)
+        right_cam_image = CameraImage(right_image_data, self.sensor_fov, self.lens)
 
-        # sets all pixels with detected bad positions to black
-        new_image_array[problem_positions_yx] = 0
+        left_mapping = left_cam_image.process_coordinate_map(left_coordinate_map)
+        right_mapping = right_cam_image.process_coordinate_map(right_coordinate_map)
 
-        # set the invalid areas as set in the coordinate map to black
-        new_image_array[invalid_map] = 0
+        left_latitude = left_coordinate_map[:, :, 0]
+        left_overdata_map = np.logical_and(left_latitude > fov_overdata_min, left_latitude <= fov_overdata_max)
+        left_factor_map = (left_latitude - fov_overdata_max) / fov_overdata_range * -1
+        left_factor_map[np.logical_not(left_overdata_map)] = 1.0
+        left_factor_map = np.expand_dims(left_factor_map, 2)
+        left_image = left_mapping.astype(np.float) * (left_factor_map)
 
-        return new_image_array
+
+        right_latitude = right_coordinate_map[:, :, 0]
+        right_overdata_map = np.logical_and(right_latitude > fov_overdata_min, right_latitude <= fov_overdata_max)
+        right_factor_map = (right_latitude - fov_overdata_max) / fov_overdata_range * -1
+        right_factor_map[np.logical_not(right_overdata_map)] = 1.0
+        right_factor_map = np.expand_dims(right_factor_map, 2)
+        right_image = right_mapping.astype(np.float) * (right_factor_map)
+
+        final_image = (left_image + right_image).astype(np.uint8)
+        final_image[invalid_map] = 0
+
+        return final_image
 
 
 class PanoramaImage(ProjectionImage):
@@ -479,7 +471,7 @@ class PanoramaImage(ProjectionImage):
         return coordinate_map
 
     def process_coordinate_map(
-        self, coordinate_map: npt.NDArray[np.float64]
+            self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
         """Produces a new image based on a coordinate maps.
 
@@ -514,7 +506,7 @@ class PanoramaImage(ProjectionImage):
 
 
 def map_projection(
-    coordinate_map: npt.NDArray[np.float64],
+        coordinate_map: npt.NDArray[np.float64],
 ) -> npt.NDArray[np.uint8]:
     """Converts a coordinate map to a color map.
 
