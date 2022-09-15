@@ -27,6 +27,7 @@ import numpy.typing as npt
 
 from photonbend.core._shared import make_complex
 from photonbend.core.lens import Lens
+from photonbend.utils import to_radians
 
 UniFloat = TypeVar("UniFloat", float, npt.NDArray[np.float64])
 
@@ -40,7 +41,7 @@ class ProjectionImage(Protocol):
 
     @abstractmethod
     def process_coordinate_map(
-            self, coordinate_map: npt.NDArray[np.float64]
+        self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
         ...
 
@@ -64,11 +65,11 @@ class CameraImage(ProjectionImage):
     """
 
     def __init__(
-            self,
-            image_arr: npt.NDArray[np.uint8],
-            fov: float,
-            lens: Lens,
-            magnitude: Union[None, float] = None,
+        self,
+        image_arr: npt.NDArray[np.uint8],
+        fov: float,
+        lens: Lens,
+        magnitude: Union[None, float] = None,
     ):
         """Initializes instance attributes.
         Args:
@@ -148,7 +149,9 @@ class CameraImage(ProjectionImage):
         coordinate_map = np.concatenate([latitude, longitude, invalid_float], 2)
         return coordinate_map
 
-    def _compute_latitude_longitude(self) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    def _compute_latitude_longitude(
+        self,
+    ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         o_height, o_width = self.image.shape[:2]
 
         # making a the mesh to represent the pixel coordinates
@@ -161,7 +164,7 @@ class CameraImage(ProjectionImage):
         )
 
         # uses euclidean distance to compute pixel distances from the center
-        distance_mesh = np.sqrt(mesh_x ** 2 + mesh_y ** 2) / self.f_distance
+        distance_mesh = np.sqrt(mesh_x**2 + mesh_y**2) / self.f_distance
 
         # uses the reverse lens function to get an angle of incidence for each pixel
         latitude: npt.NDArray[np.float64] = self.reverse_lens(distance_mesh)
@@ -173,7 +176,7 @@ class CameraImage(ProjectionImage):
 
     # Protocol implementation
     def process_coordinate_map(
-            self, coordinate_map: npt.NDArray[np.float64]
+        self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
         """Produces a new image based on a coordinate map.
 
@@ -198,15 +201,11 @@ class CameraImage(ProjectionImage):
         positions_x, positions_y = self._make_cartesian_map(latitude, longitude)
 
         # removes bad positions in y
-        problem_positions_y = np.logical_or(
-            positions_y >= height, positions_y < 0
-        )
+        problem_positions_y = np.logical_or(positions_y >= height, positions_y < 0)
         positions_y[problem_positions_y] = 0
 
         # removes bad positions in x
-        problem_positions_x = np.logical_or(
-            positions_x >= width, positions_x < 0
-        )
+        problem_positions_x = np.logical_or(positions_x >= width, positions_x < 0)
         positions_x[problem_positions_x] = 0
 
         # makes a simplified map to set all bad positions to black
@@ -234,9 +233,11 @@ class CameraImage(ProjectionImage):
         unbalanced_cartesian_position = np.exp(longitude * 1j) * distance
         # calculates the balanced positions
         balanced_position_y = (
-                (unbalanced_cartesian_position.imag * (-1)) + image_center[0]
+            (unbalanced_cartesian_position.imag * (-1)) + image_center[0]
         ).astype(int)
-        balanced_position_x = (unbalanced_cartesian_position.real + image_center[1]).astype(int)
+        balanced_position_x = (
+            unbalanced_cartesian_position.real + image_center[1]
+        ).astype(int)
         return balanced_position_x, balanced_position_y
 
     def _get_image_center(self):
@@ -256,10 +257,7 @@ class CameraImage(ProjectionImage):
 
 class DoubleCameraImage(ProjectionImage):
     def __init__(
-            self,
-            image_arr: npt.NDArray[np.uint8],
-            sensor_fov: float,
-            lens: Lens,
+        self, image_arr: npt.NDArray[np.uint8], sensor_fov: float, lens: Lens, **kwargs
     ):
         """Initializes instance attributes.
         Args:
@@ -320,7 +318,9 @@ class DoubleCameraImage(ProjectionImage):
         half_width = self.image.shape[1] // 2
         # Maps the invalid areas
         invalid_map = latitude > self.sensor_fov / 2.0
-        invalid_map[:, half_width:] = latitude[:, half_width:] < np.pi - (self.sensor_fov / 2.0)
+        invalid_map[:, half_width:] = latitude[:, half_width:] < np.pi - (
+            self.sensor_fov / 2.0
+        )
         latitude = latitude.reshape(*latitude.shape, 1)
         longitude = longitude.reshape(*longitude.shape, 1)
 
@@ -335,7 +335,7 @@ class DoubleCameraImage(ProjectionImage):
 
         # making of 2 meshes
         mesh_x, mesh_y = self._make_mesh()
-        distance_mesh = np.sqrt(mesh_x ** 2 + mesh_y ** 2) / self.f_distance
+        distance_mesh = np.sqrt(mesh_x**2 + mesh_y**2) / self.f_distance
 
         # computes latitudes
         latitude: npt.NDArray[np.float64] = self.reverse_lens(distance_mesh)
@@ -369,15 +369,16 @@ class DoubleCameraImage(ProjectionImage):
         return mesh_x, mesh_y
 
     def process_coordinate_map(
-            self, coordinate_map: npt.NDArray[np.float64]
+        self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
         # Calculate the shape for half of the image horizontally
         real_height, real_width = self.image.shape[:2]
         height, width = real_height, real_width // 2
-        fov_overdata_ref = (self.sensor_fov / 2) - (np.pi / 2)
-        fov_overdata_min = np.pi/2 - fov_overdata_ref
-        fov_overdata_max = np.pi/2 + fov_overdata_ref
-        fov_overdata_range = 2.0 * fov_overdata_ref
+        fov_merger_ref = (self.sensor_fov / 2) - (np.pi / 2)
+        fov_merger_min = np.pi / 2 - fov_merger_ref
+        fov_merger_max = np.pi / 2 + fov_merger_ref
+        fov_merger_range = 2.0 * fov_merger_ref
+        fov_merger_safety = to_radians(0.5)  # a margin value on a fade gradient
 
         # Get the data from the passed coordinate map
         invalid_map = coordinate_map[:, :, 2] != 0.0
@@ -385,13 +386,12 @@ class DoubleCameraImage(ProjectionImage):
         left_coordinate_map = coordinate_map
 
         right_coordinate_map = np.copy(coordinate_map)
-        right_coordinate_map[:, :, 0] *= (-1)
+        right_coordinate_map[:, :, 0] *= -1
         right_coordinate_map[:, :, 0] += np.pi
 
         left_image_data = self.image[:, :width]
         right_image_data = np.copy(self.image[:, width:])
         right_image_data = right_image_data[:, ::-1]
-
 
         left_cam_image = CameraImage(left_image_data, self.sensor_fov, self.lens)
         right_cam_image = CameraImage(right_image_data, self.sensor_fov, self.lens)
@@ -400,19 +400,24 @@ class DoubleCameraImage(ProjectionImage):
         right_mapping = right_cam_image.process_coordinate_map(right_coordinate_map)
 
         left_latitude = left_coordinate_map[:, :, 0]
-        left_overdata_map = np.logical_and(left_latitude > fov_overdata_min, left_latitude <= fov_overdata_max)
-        left_factor_map = (left_latitude - fov_overdata_max) / fov_overdata_range * -1
-        left_factor_map[np.logical_not(left_overdata_map)] = 1.0
+        left_merger_map = np.logical_and(
+            left_latitude >= fov_merger_min,
+            left_latitude <= (fov_merger_max + fov_merger_safety),
+        )
+        left_factor_map = (left_latitude - fov_merger_max) / fov_merger_range * -1
+        left_factor_map[np.logical_not(left_merger_map)] = 1.0
         left_factor_map = np.expand_dims(left_factor_map, 2)
-        left_image = left_mapping.astype(np.float) * (left_factor_map)
-
+        left_image = left_mapping.astype(np.float64) * (left_factor_map)
 
         right_latitude = right_coordinate_map[:, :, 0]
-        right_overdata_map = np.logical_and(right_latitude > fov_overdata_min, right_latitude <= fov_overdata_max)
-        right_factor_map = (right_latitude - fov_overdata_max) / fov_overdata_range * -1
-        right_factor_map[np.logical_not(right_overdata_map)] = 1.0
+        right_merger_map = np.logical_and(
+            right_latitude >= fov_merger_min,
+            right_latitude <= (fov_merger_max + fov_merger_safety),
+        )
+        right_factor_map = (right_latitude - fov_merger_max) / fov_merger_range * -1
+        right_factor_map[np.logical_not(right_merger_map)] = 1.0
         right_factor_map = np.expand_dims(right_factor_map, 2)
-        right_image = right_mapping.astype(np.float) * (right_factor_map)
+        right_image = right_mapping.astype(np.float64) * (right_factor_map)
 
         final_image = (left_image + right_image).astype(np.uint8)
         final_image[invalid_map] = 0
@@ -471,7 +476,7 @@ class PanoramaImage(ProjectionImage):
         return coordinate_map
 
     def process_coordinate_map(
-            self, coordinate_map: npt.NDArray[np.float64]
+        self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
         """Produces a new image based on a coordinate maps.
 
@@ -506,7 +511,7 @@ class PanoramaImage(ProjectionImage):
 
 
 def map_projection(
-        coordinate_map: npt.NDArray[np.float64],
+    coordinate_map: npt.NDArray[np.float64],
 ) -> npt.NDArray[np.uint8]:
     """Converts a coordinate map to a color map.
 

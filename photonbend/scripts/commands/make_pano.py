@@ -21,10 +21,11 @@
 
 import sys
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple, List, Optional, Final
 
 import click
 import numpy as np
+import numpy.typing as npt
 from PIL import Image
 
 from photonbend.utils import to_radians
@@ -42,14 +43,18 @@ from . import (
     double_type_fov_warning,
     rotation_help,
     _process_fov,
+    _get_camera,
 )
 from photonbend.core.projection import CameraImage, PanoramaImage
 from photonbend.core.rotation import Rotation
+
+Channels: Final[int] = 3
 
 
 @click.argument("input_image", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--type",
+    "itype",
     required=True,
     help="The type of the input image. " + type_choices_help,
     type=type_choices,
@@ -68,13 +73,6 @@ from photonbend.core.rotation import Rotation
     + double_type_fov_warning,
 )
 @click.option(
-    "--ssample",
-    required=False,
-    type=click.INT,
-    help="The ammount of supersampling applied",
-    default=1,
-)
-@click.option(
     "-r",
     "--rotation",
     required=False,
@@ -84,15 +82,23 @@ from photonbend.core.rotation import Rotation
     help=rotation_help,
     multiple=True,
 )
+@click.option(
+    "-s",
+    "--size",
+    required=False,
+    type=click.INT,
+    default=None,
+    help="The vertical size of the destiny image",
+)
 @click.argument("output_image", type=click.Path(exists=False, path_type=Path))
 def make_pano(
     input_image: Path,
-    type: CamImgTypeStr,
+    itype: CamImgTypeStr,
     lens: CamLensStr,
     fov: float,
     output_image: Path,
-    ssample: int,
     rotation: List[Tuple[float, float, float]],
+    size: Optional[int],
 ) -> None:
     """Make a panorama out of a photo.
 
@@ -104,16 +110,15 @@ def make_pano(
 
     # Opens the image or finish the application if there is no image
     source_array = _open_image(input_image)
-    source_type = _process_image_type(type)
+    source_type = _process_image_type(itype)
     source_lens = _process_lens(lens)
     source_magnitude = _calculate_magnitude(source_type, source_array.shape)
     source_fov = _process_fov(fov, source_type)
-    source_image = CameraImage(
+    source_image = _get_camera(source_type)(
         source_array, source_fov, source_lens, magnitude=source_magnitude
     )
-    s_height, s_width, _ = source_array.shape
 
-    destiny_shape = (s_height, int(s_width * 2), 3)
+    destiny_shape = _calculate_destiny_size(source_array, size)
     destiny_array = np.zeros(destiny_shape, np.uint8)
     destiny_image = PanoramaImage(destiny_array)
     destiny_map = destiny_image.get_coordinate_map()
@@ -132,3 +137,13 @@ def make_pano(
         print("Could not save to the specified location!")
         print("Exiting!")
         sys.exit(1)
+
+
+def _calculate_destiny_size(
+    source_image: npt.NDArray, height: Optional[int]
+) -> Tuple[int, int, int]:
+    local_height = source_image.shape[0]
+    if height is not None:
+        local_height = height
+
+    return local_height, int(local_height * 2), Channels

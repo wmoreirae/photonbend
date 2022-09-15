@@ -20,7 +20,7 @@
 
 import sys
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import click
 import numpy as np
@@ -41,8 +41,10 @@ from . import (
     double_type_fov_warning,
     rotation_help,
     _process_fov,
+    _get_camera,
+    _calculate_destiny_size,
 )
-from photonbend.core.projection import CameraImage
+from photonbend.core.projection import CameraImage, ProjectionImage
 from photonbend.core.rotation import Rotation
 
 
@@ -84,13 +86,6 @@ from photonbend.core.rotation import Rotation
     type=click.FLOAT,
     help="The lens field of view of the output photo in degrees.",
 )
-@click.option(
-    "--ssample",
-    required=False,
-    type=click.INT,
-    help="The ammount of supersampling applied (ss²)",
-    default=1,
-)
 @click.argument("output_image", type=click.Path(exists=False, path_type=Path))
 @click.option(
     "-r",
@@ -102,6 +97,14 @@ from photonbend.core.rotation import Rotation
     help=rotation_help,
     multiple=True,
 )
+@click.option(
+    "-s",
+    "--size",
+    required=False,
+    type=click.INT,
+    default=None,
+    help="The vertical size of the destiny image",
+)
 def alter_photo(
     input_image: Path,
     itype: CamImgTypeStr,
@@ -111,8 +114,8 @@ def alter_photo(
     olens: CamLensStr,
     ofov: float,
     output_image: Path,
-    ssample: int,
     rotation: List[Tuple[float, float, float]],
+    size: Optional[int],
 ) -> None:
     """Change the the lens and FoV of a photo.
 
@@ -128,34 +131,17 @@ def alter_photo(
     source_lens = _process_lens(ilens)
     source_magnitude = _calculate_magnitude(source_type, source_array.shape)
     source_fov = _process_fov(ifov, source_type)
-    source_image = CameraImage(
+    source_image: ProjectionImage = _get_camera(source_type)(
         source_array, source_fov, source_lens, magnitude=source_magnitude
     )
 
-    destiny_shape = source_array.shape  # TODO define a function to choose a good size
-    destiny_array = np.zeros(destiny_shape, np.uint8)
     destiny_type = _process_image_type(otype)
+    destiny_shape = _calculate_destiny_size(destiny_type, source_array, height=size)
+    destiny_array = np.zeros(destiny_shape, np.uint8)
     destiny_lens = _process_lens(olens)
     destiny_magnitude = _calculate_magnitude(destiny_type, source_array.shape)
     destiny_fov = _process_fov(ofov, destiny_type)
-
-    # TODO check this old code to see what it does
-    # It seems to be a code to choose a good shape for the destiny array
-    #
-    # if (
-    #     source_type is not destiny_type
-    # ) and destiny_type is CameraImageType.DOUBLE_INSCRIBED:
-    #     y, x, c = source_array.shape
-    #     destiny_array = np.zeros((y, x * 2, c), np.uint8)
-    # elif (
-    #     source_type is not destiny_type
-    # ) and source_type is CameraImageType.DOUBLE_INSCRIBED:
-    #     y, x, c = source_array.shape
-    #     destiny_array = np.zeros((y, x // 2, c), np.uint8)
-    # else:
-    #     destiny_array = np.zeros(source_array.shape, np.uint8)
-
-    destiny_image = CameraImage(
+    destiny_image: ProjectionImage = _get_camera(cam_img_type=destiny_type)(
         destiny_array, destiny_fov, destiny_lens, magnitude=destiny_magnitude
     )
     destiny_map = destiny_image.get_coordinate_map()

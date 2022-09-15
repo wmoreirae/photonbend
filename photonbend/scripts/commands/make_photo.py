@@ -21,7 +21,7 @@
 
 import sys
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import click
 import numpy as np
@@ -42,6 +42,9 @@ from . import (
     double_type_fov_warning,
     rotation_help,
     _process_fov,
+    _get_camera,
+    CameraImageType,
+    _calculate_destiny_size,
 )
 from photonbend.core.projection import CameraImage, PanoramaImage
 from photonbend.core.rotation import Rotation
@@ -51,6 +54,7 @@ from photonbend.utils import calculate_size_panorama_to_photo
 @click.argument("input_image", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--type",
+    "otype",
     required=True,
     help="The type of the output image. " + type_choices_help,
     type=type_choices,
@@ -69,13 +73,6 @@ from photonbend.utils import calculate_size_panorama_to_photo
     + double_type_fov_warning,
 )
 @click.option(
-    "--ssample",
-    required=False,
-    type=click.INT,
-    help="The ammount of supersampling applied",
-    default=1,
-)
-@click.option(
     "-r",
     "--rotation",
     required=False,
@@ -85,15 +82,23 @@ from photonbend.utils import calculate_size_panorama_to_photo
     help=rotation_help,
     multiple=True,
 )
+@click.option(
+    "-s",
+    "--size",
+    required=False,
+    type=click.INT,
+    default=None,
+    help="The vertical size of the destiny image",
+)
 @click.argument("output_image", type=click.Path(exists=False, path_type=Path))
 def make_photo(
     input_image: Path,
-    type: CamImgTypeStr,
+    otype: CamImgTypeStr,
     lens: CamLensStr,
     fov: float,
     output_image: Path,
-    ssample: int,
     rotation: List[Tuple[float, float, float]],
+    size: Optional[int],
 ) -> None:
     """Make a photo out of a panorama.
 
@@ -108,12 +113,13 @@ def make_photo(
     source_image = PanoramaImage(source_array)
     s_height, s_width, _ = source_array.shape
 
-    destiny_type = _process_image_type(type)
+    destiny_type = _process_image_type(otype)
+    destiny_shape = _calculate_destiny_size(destiny_type, source_array, height=size)
     destiny_lens = _process_lens(lens)
-    destiny_shape = (s_height, int(s_width / 2), 3)
+
     destiny_magnitude = _calculate_magnitude(destiny_type, destiny_shape)
     destiny_fov = _process_fov(fov, destiny_type)
-    destiny_image = CameraImage(
+    destiny_image = _get_camera(destiny_type)(
         np.zeros(destiny_shape, np.int8),
         destiny_fov,
         destiny_lens,
@@ -127,7 +133,7 @@ def make_photo(
         destiny_map = rotation_transform.rotate_coordinate_map(destiny_map)
 
     mapped_array = source_image.process_coordinate_map(destiny_map)
-    mapped_image = Image.fromarray(mapped_array)
+    mapped_image = Image.fromarray(np.copy(mapped_array))
 
     try:
         mapped_image.save(out)

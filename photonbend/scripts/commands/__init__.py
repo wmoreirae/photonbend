@@ -21,7 +21,7 @@
 import sys
 from enum import IntEnum, auto
 from pathlib import Path
-from typing import Tuple, Literal
+from typing import Tuple, Literal, Optional, Final
 
 import click
 import numpy as np
@@ -37,8 +37,12 @@ from photonbend.core.lens import (
     Lens,
 )
 
+from photonbend.core.projection import DoubleCameraImage, CameraImage, ProjectionImage
+
 # Some literal types that will be used on many commands
 from photonbend.utils import to_radians
+
+Channels: Final[int] = 3
 
 CamImgTypeStr = Literal["inscribed", "double", "cropped", "full"]
 CamLensStr = Literal[
@@ -77,6 +81,13 @@ class CameraImageType(IntEnum):
     DOUBLE_INSCRIBED = auto()
 
 
+def _get_camera(cam_img_type: CameraImageType):
+    if cam_img_type is CameraImageType.DOUBLE_INSCRIBED:
+        return DoubleCameraImage
+    else:
+        return CameraImage
+
+
 def _calculate_magnitude(image_type: CameraImageType, shape: Tuple[int, ...]) -> float:
     if len(shape) > 3:
         raise ValueError(
@@ -87,7 +98,7 @@ def _calculate_magnitude(image_type: CameraImageType, shape: Tuple[int, ...]) ->
     if image_type is CameraImageType.INSCRIBED:
         magnitude = width / 2 - 0.5
     elif image_type is CameraImageType.DOUBLE_INSCRIBED:
-        raise NotImplementedError("Using double inscribed has not been implemented yet")
+        magnitude = height / 2 - 0.5
     elif image_type is CameraImageType.FULL_FRAME:
         y = height / 2.0 - 0.5
         x = width / 2.0 - 0.5
@@ -164,3 +175,17 @@ def _process_fov(fov: float, image_type: CameraImageType):
         raise ValueError("The fov of an image can't be higher than 360 degrees.")
     r_fov = to_radians(fov)
     return r_fov
+
+
+def _calculate_destiny_size(
+    image_type: CameraImageType, source_image: npt.NDArray, height: Optional[int]
+) -> Tuple[int, int, int]:
+    local_height = source_image.shape[0]
+    if height is not None:
+        local_height = height
+
+    if image_type is CameraImageType.DOUBLE_INSCRIBED:
+        ans = (local_height, 2 * local_height, Channels)
+    else:
+        ans = (local_height, local_height, Channels)
+    return ans
