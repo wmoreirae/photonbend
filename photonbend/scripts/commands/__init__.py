@@ -154,7 +154,7 @@ type_choices_help = """
 
     \b
     The choices are:
-    - inscribed: The valid data is on a inscribed circle inscribed.
+    - inscribed: The valid data is on a inscribed circle.
     - double: The valid data is on two inscribed side-by-side circles.
     - cropped: The valid data is on a inscribed circle, top-and-bottom cropped.
     - full: The whole area of the image is valid data. 

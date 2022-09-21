@@ -18,12 +18,14 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-__doc__ = """This module has the lens class and using it, it defines many lenses that
-    are available.
+__doc__ = """This module has the **Lens** class and the implementation for some of the
+    lens functions and reverse lens functions.
+    
+    It provides many Lenses models.
 
-    It defines the **UniFloat** type. For all intents and purposes, this type
-    means either **float** or **npt.NDArray[np.float64]**, but only one of them
-    per call.
+    For static analysis purposes, it defines the **UniFloat** type.
+    For all intents and purposes, this type means either **float** or
+    **npt.NDArray[np.float64]**, but only one of them per function call.
 
     That means all lens functions:
     * Return a *float* when given one.
@@ -330,7 +332,7 @@ def _thoby(theta: UniFloat) -> UniFloat:
 def rectilinear() -> Lens:
     r"""Returns a rectilinear lens.
 
-    Functions are:
+    It's functions are:
     * $f(\theta) = \tan(\theta)$
     * $f(projection) = \arctan(projection)$
     """
@@ -340,7 +342,7 @@ def rectilinear() -> Lens:
 def equisolid() -> Lens:
     r"""Returns an equisolid lens.
 
-    Functions are:
+    It's functions are:
     * $f(\theta) = 2 \times \sin(\frac{\theta}{2})$
     * $f(projection) = 2 \times \arcsin(\frac{projection}{2})$
     """
@@ -350,7 +352,7 @@ def equisolid() -> Lens:
 def equidistant() -> Lens:
     r"""Returns an equidistant lens.
 
-    Functions are:
+    It's functions are:
     * $f(\theta) = \theta$
     * $f(projection) = projection$
 
@@ -362,7 +364,7 @@ def equidistant() -> Lens:
 def orthographic() -> Lens:
     r"""Returns an orthographic lens.
 
-    Functions are:
+    It's functions are:
     * $f(\theta) = \sin(\theta)$
     * $f(projection) = \arcsin(projection)$
     """
@@ -372,7 +374,7 @@ def orthographic() -> Lens:
 def stereographic() -> Lens:
     r"""Returns a stereographic lens
 
-    Functions are:
+    It's functions are:
     * $f(\theta) = 2 \times \tan(\frac{\theta}{2})$
     * $f(projection) = 2\times \arctan(\frac{projection}{2})$
     """
@@ -381,7 +383,7 @@ def stereographic() -> Lens:
 
 def thoby() -> Lens:
     r"""Returns a thoby lens.
-    Functions are:
+    It's functions are:
 
     * $f(\theta) = 1.47 \times \sin(0.713 \times \theta)$
 

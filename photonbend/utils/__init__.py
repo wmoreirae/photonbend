@@ -18,6 +18,8 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+__doc__ = "Some simple utility functions are available here"
+
 from typing import Tuple, Callable
 import numpy as np
 

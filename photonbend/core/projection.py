@@ -18,7 +18,12 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-# TODO try to use the old SphereImage supersampling code to improve the new base
+__doc__ = """
+This module provides the classes and methods that allow you to map pixels to angles and
+vice-versa. It allows you to convert between different sort of images through its
+classes. 
+
+"""
 
 from typing import Protocol, Union, TypeVar, Tuple
 from abc import abstractmethod
@@ -33,23 +38,39 @@ UniFloat = TypeVar("UniFloat", float, npt.NDArray[np.float64])
 
 
 class ProjectionImage(Protocol):
+    """Defines the protocol used by all projection images.
+
+    """
     image: np.ndarray
 
     @abstractmethod
     def get_coordinate_map(self) -> npt.NDArray[np.float64]:
+        """Should return this image coordinate map.
+
+        Returns a coordinate map for this image based on its structure
+
+        *For more information on coordinate maps check the documentation
+        for the photonbend.core module.*"""
         ...
 
     @abstractmethod
     def process_coordinate_map(
         self, coordinate_map: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.uint8]:
+        """Should map the image based on the received coordinate map.
+
+        Returns a image by mapping this image's pixels to the received coordinate map
+        based on its coordinates and its own mapping.
+
+        *For more information on coordinate maps check the documentation
+        for the photonbend.core module.*"""
         ...
 
 
 class CameraImage(ProjectionImage):
     """Store and process camera-based images and their coordinates.
 
-    This class maps each pixel of an image to a polar coordinates of the form
+    This class maps each pixel of an image to a geodesic-like coordinate of the form
     (latitude, longitude) based on its attributes.
     It can handle images that follow the principles of camera-based imagery.
 
@@ -57,8 +78,7 @@ class CameraImage(ProjectionImage):
         image (np.ndarray[int8]): The image as a numpy array with the shape
             (height, width, 3).
         fov (float): The image Field of View in radians.
-        forward_lens (Callable): The lens function of this image.
-        reverse_lens (Callable): The inverse of this image's lens function.
+        lens (Lens): This image's lens instance.
         magnitude (float): The distance in pixels from the center of the image
             where the maximum FoV is reached.
         f_distance (float): The focal distance of this image in pixels.
@@ -73,7 +93,7 @@ class CameraImage(ProjectionImage):
     ):
         """Initializes instance attributes.
         Args:
-            image_arr (np.ndarray): A numpy array of int8 representing an RGB
+            image_arr (numpy.ndarray): A numpy array of int8 representing an RGB
                 image. The image follows the shape (height, width, 3).
             fov (float): Thehe Field of View in radians.
             lens (Lens): A lens with its forward and reverse functions.
@@ -256,6 +276,24 @@ class CameraImage(ProjectionImage):
 
 
 class DoubleCameraImage(ProjectionImage):
+    """Store and process 360 degrees camera-based images and their coordinates.
+
+    This class maps each pixel of an image to a geodesic-like coordinate of the form
+    (latitude, longitude) based on its attributes.
+    It can handle images that follow the principles of 360 degrees cameras, which
+    store the two images captured by its 2 opposite sensors, side-by-side on a
+    single image file.
+
+    Attributes:
+        image (np.ndarray[int8]): The image as a numpy array with the shape
+            (height, width, 3).
+        fov (float): The image Field of View in radians for each sensor.
+        lens (Lens): This image's lens instance.
+        magnitude (float): The distance in pixels from the center of the image
+            where the maximum FoV is reached.
+        f_distance (float): The focal distance of this image in pixels.
+    """
+
     def __init__(
         self, image_arr: npt.NDArray[np.uint8], sensor_fov: float, lens: Lens, **kwargs
     ):
@@ -488,7 +526,7 @@ class PanoramaImage(ProjectionImage):
 
         Args:
             coordinate_map (np.ndarray): A numpy array of float64 as a
-            coordinate map.
+                coordinate map.
         Returns:
             A new image (ndarray) based on the pixel data of this instance and
             the given coordinate map.
@@ -515,7 +553,11 @@ def map_projection(
 ) -> npt.NDArray[np.uint8]:
     """Converts a coordinate map to a color map.
 
-    Converts a coordinate to a RGB color map so that we can see the projection.
+    A simple visualization method that allows one to converts a coordinate map to to a
+    RGB color map so that we can see the projection.
+
+    Latitude gets translated to **red**, Longitude to **green** and invalid area mapping
+    gets translated to **blue**.
     """
     rgb_range = 255.0
 
