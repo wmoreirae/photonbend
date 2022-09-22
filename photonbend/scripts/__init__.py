@@ -28,25 +28,25 @@ __doc__ = (
      - [make-pano](#make-pano)
      
     ## Parameters
-    The tools have a common theme among them.
+    The commands have a common theme among them.
     Parameters may have an **"i"** prefix or an **"o"** prefix. The former refer to
     parameters related to the input image. The latter refer to parameters related to the
     output image. When a single version of the parameter is possible for the operation,
     the prefix is omitted.
-    
-    - lens (ilens|olens): Describe the desired lens used for the image.
+    - --help: Provide some instructions on the command usage
+    - --lens (ilens|olens): Describe the desired lens used for the image.
         - equidistant
         - equisolid 
         - orthographic
         - rectilinear
         - stereographic
-    - type (itype|otype): Type of the image used or desired.
+    - --type (itype|otype): Type of the image used or desired.
         - inscribed: The valid data is on a inscribed circle.
         - double: The valid data is on two inscribed side-by-side circles.    
         - cropped: The valid data is on a inscribed circle, top-and-bottom cropped.    
         - full: The whole area of the image is valid data.
-    - fov (ifov|ofov): The camera or sensor Field of View in degrees.
-    - rotation: The rotation you want to apply in degrees on 3 axis of freedom.
+    - --fov (ifov|ofov): The camera or sensor Field of View in degrees.
+    - --rotation: The rotation you want to apply in degrees on 3 axis of freedom.
         - pitch
         - yaw
         - roll
@@ -56,7 +56,7 @@ __doc__ = (
     ## make-photo
     This tool allows you to make a photo out of an equirectangular panorama (2:1 aspect ration).
         
-    ### Make a 360 degrees photo with an equidistant lens
+    #### Make a 360 degrees photo with an equidistant lens
     The example below creates a photo of type `inscribed`, with an `equidistant` lens, 
     and an FoV of `360` degrees named `equidistant.jpg` from the panorama in the file 
     named `panorama.jpg`
@@ -70,7 +70,7 @@ __doc__ = (
     This tool allows you to change your photos by exchanging lenses, FoV, and types as
     well as rotate your images.
     
-    ### Change of projection (Lens)
+    #### Change of projection (Lens)
     The example below changes the photo lenses from `equidistant` projection to
     `equisolid` projection.
     
@@ -79,7 +79,7 @@ __doc__ = (
     --olens equisolid --ifov 360 --ofov 360 equidistant.jpg equisolid.jpg
     ```
     
-    ### Change of FoV
+    #### Change of FoV
     The example below changes the photo `equidistant.jpg`. Its FoV is altered from `360`
     degrees to `180`, producing the image `equidistant-180.jpg`.
     
@@ -88,9 +88,9 @@ __doc__ = (
     --olens equidistant --ifov 360 --ofov 180 equidistant.jpg equidistant-180.jpg
     ```
     
-    **Notice this is a lossy operation. The new image will lose about half of its view data**
+    **Notice this is a very lossy operation. The new image will lose about half of its view data**
     
-    ### Change of type
+    #### Change of type
     The example below changes the photo `equidistant.jpg`.
     Its type from `inscribed` to `double`, producing `equidistant-double.jpg`.
     
@@ -105,7 +105,7 @@ __doc__ = (
      --olens equidistant --ifov 360 --ofov 195 equidistant.jpg equidistant-double.jpg
     ```   
     
-    ### Change of type, lens, and FoV
+    #### Change of type, lens, and FoV
     The example below changes the photo `equidistant.jpg` from type `inscribed` to
     `full`, its lenses from `equidistant` to `rectilinear`, and its FoV from `360`
     degrees to `140`, producing the image `rectlinear-full.jpg`.
@@ -116,7 +116,7 @@ __doc__ = (
     ```
     
     
-    ### Rotation
+    #### Rotation
     The example below changes the photo `equidistant.jpg`, rotating it `-90` degrees in
     pitch, `0` degrees in yaw, and `0` degrees in roll, producing
     `equidistant-rotated.jpg`.
@@ -127,7 +127,7 @@ __doc__ = (
     equidistant-rotated.jpg
     ```
     
-    ### Combining it all
+    #### Combining it all
     The example below changes the photo `equidistant.jpg` from type `inscribed` to
     `full`, its lenses from `equidistant` to `rectilinear`, and its FoV from `360`
     degrees to `140`. It is also rotated by `-90` degrees in pitch, `195` degrees in yaw
@@ -142,7 +142,7 @@ __doc__ = (
     ## make-pano
     This tool allows you to change create panoramas out of your photos
     
-    ### Make a panorama
+    #### Make a panorama
     Make a panorama out of an `inscribed`, `equidistant` lens, `360` degrees FoV photo
     named `equidistant.jpg`, producing `panorama.jpg`.
     
@@ -151,7 +151,7 @@ __doc__ = (
     --fov 360 equidistant.jpg panorama.jpg
     ```    
     
-    ### Make a rotated panorama
+    #### Make a rotated panorama
     Make a panorama out of an `inscribed`, `equidistant` lens, `360` degrees FoV photo
     named `equidistant.jpg`, producing `panorama_rotated.jpg`.
     

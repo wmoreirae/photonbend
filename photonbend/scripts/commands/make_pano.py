@@ -45,7 +45,7 @@ from . import (
     _process_fov,
     _get_camera,
 )
-from photonbend.core.projection import CameraImage, PanoramaImage
+from photonbend.core.projection import PanoramaImage
 from photonbend.core.rotation import Rotation
 
 Channels: Final[int] = 3

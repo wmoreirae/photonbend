@@ -18,7 +18,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-__doc__ = "Some simple utility functions are available here"
+__doc__ = "Some simple utility functions are available here."
 
 from typing import Tuple, Callable
 import numpy as np
@@ -98,7 +98,8 @@ def calculate_size_panorama_to_photo(
 
     Returns:
         A tuple containing the appropriate size (width, height) in
-        pixels for the conversion of the panorama to a photo-line image.
+        pixels for the conversion of the panorama to a photo-line image
+        for maintaining similar level of image detail.
     """
 
     width, height = panorama_size

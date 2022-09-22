@@ -21,7 +21,8 @@
 __doc__ = """This module has the **Lens** class and the implementation for some of the
     lens functions and reverse lens functions.
     
-    It provides many Lenses models.
+    It provides many Lenses models which are usually used with
+    photonbend.core.projection.CameraImage instances.
 
     For static analysis purposes, it defines the **UniFloat** type.
     For all intents and purposes, this type means either **float** or

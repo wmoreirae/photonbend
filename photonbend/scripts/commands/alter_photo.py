@@ -44,7 +44,7 @@ from . import (
     _get_camera,
     _calculate_destiny_size,
 )
-from photonbend.core.projection import CameraImage, ProjectionImage
+from photonbend.core.projection import ProjectionImage
 from photonbend.core.rotation import Rotation
 
 
