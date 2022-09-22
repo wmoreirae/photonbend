@@ -34,7 +34,7 @@ shape (height, width, channels). Channels is **always** equal to number 3, and i
 for the pixels channels, the colors **Red, Green and Blue**.
 
 ```
-# Making a new black image of width 1000 and height 600 using numpy 
+# Making a new black image of width 1000 and height 600 using numpy
 import numpy as np
 black_image = np.zeros((600, 1000, 3), np.uint8)
 ```
@@ -46,7 +46,7 @@ a Invalid pixel marker.
 - Latitude is represented in radians from 0 to Pi radians.
 - Longitude is represented in radians from 0 to 2*Pi radians.
 - Invalid is a marker. Any pixel which has an invalid value not equal to 0 should be
-    considered invalid. 
+    considered invalid.
 
 ## The ProjectionImage Protocol
 The protocol used by photonbend to allow the interchange between image mappings (camera
@@ -66,9 +66,9 @@ It is composed of only 2 methods and an instance variable:
 ### Example on how to use the Projection Protocol
 ```
 # You may use PIL or Pillow to save the final image
-from PIL import image 
+from PIL import image
 
-... 
+...
 
 # Create the source and destiny projections
 source_projection: ProjectionImage = AProjectionClass(*source_parameters)
@@ -85,10 +85,9 @@ destiny_image = Image.fromarray(destiny_image_arr)
 destiny_image.save("Destiny.jpg")
 
 # Or you put it on the destiny_projection for some other use
-destiny_projection.image = destiny_image_arr 
+destiny_projection.image = destiny_image_arr
 
 ...
 
 ```
 """
-

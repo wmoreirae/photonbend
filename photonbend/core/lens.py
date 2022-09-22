@@ -20,7 +20,7 @@
 
 __doc__ = """This module has the **Lens** class and the implementation for some of the
     lens functions and reverse lens functions.
-    
+
     It provides many Lenses models which are usually used with
     photonbend.core.projection.CameraImage instances.
 

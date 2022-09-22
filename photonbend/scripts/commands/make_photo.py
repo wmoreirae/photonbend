@@ -43,12 +43,10 @@ from . import (
     rotation_help,
     _process_fov,
     _get_camera,
-    CameraImageType,
     _calculate_destiny_size,
 )
-from photonbend.core.projection import CameraImage, PanoramaImage
+from photonbend.core.projection import PanoramaImage
 from photonbend.core.rotation import Rotation
-from photonbend.utils import calculate_size_panorama_to_photo
 
 
 @click.argument("input_image", type=click.Path(exists=True, path_type=Path))

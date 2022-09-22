@@ -37,7 +37,7 @@ from photonbend.core.lens import (
     Lens,
 )
 
-from photonbend.core.projection import DoubleCameraImage, CameraImage, ProjectionImage
+from photonbend.core.projection import DoubleCameraImage, CameraImage
 
 # Some literal types that will be used on many commands
 from photonbend.utils import to_radians
@@ -55,7 +55,7 @@ def _verify_output_path(output: Path):
     if not (out.suffix.lower() in [".jpg", ".jpeg", ".png"]):
         print("The desired output image should be a JPG or PNG file.")
         print(
-            "Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)"
+            "Provide an output filename ending in either JPG, JPEG or PNG (case insensitive)"  # noqa E501
         )
         print("Exiting!")
         sys.exit(1)
@@ -157,11 +157,11 @@ type_choices_help = """
     - inscribed: The valid data is on a inscribed circle.
     - double: The valid data is on two inscribed side-by-side circles.
     - cropped: The valid data is on a inscribed circle, top-and-bottom cropped.
-    - full: The whole area of the image is valid data. 
+    - full: The whole area of the image is valid data.
     """
 double_type_fov_warning = """
 
-    IMPORTANT: When dealing with double images, you should pass the FOV of a single circle and it must be larger than 180."""
+    IMPORTANT: FoV for double images are the value for one of the sensors and > 180ª."""
 rotation_help = """
     The rotation that should be applied to the camera.
     This is a 3-valued parameter in the form <pitch yaw roll>

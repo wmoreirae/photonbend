@@ -21,7 +21,7 @@
 __doc__ = """
 This module provides the classes and methods that allow you to map pixels to angles and
 vice-versa. It allows you to convert between different sort of images through its
-classes. 
+classes.
 
 """
 
@@ -38,9 +38,8 @@ UniFloat = TypeVar("UniFloat", float, npt.NDArray[np.float64])
 
 
 class ProjectionImage(Protocol):
-    """Defines the protocol used by all projection images.
+    """Defines the protocol used by all projection images."""
 
-    """
     image: np.ndarray
 
     @abstractmethod
@@ -411,7 +410,7 @@ class DoubleCameraImage(ProjectionImage):
     ) -> npt.NDArray[np.uint8]:
         # Calculate the shape for half of the image horizontally
         real_height, real_width = self.image.shape[:2]
-        height, width = real_height, real_width // 2
+        width = real_width // 2
         fov_merger_ref = (self.sensor_fov / 2) - (np.pi / 2)
         fov_merger_min = np.pi / 2 - fov_merger_ref
         fov_merger_max = np.pi / 2 + fov_merger_ref

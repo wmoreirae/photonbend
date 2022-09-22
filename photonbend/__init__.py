@@ -19,8 +19,7 @@
 #  SOFTWARE.
 
 
-__doc__ = (
-    """    
+__doc__ = """
     # Intro
     Photonbend is a python module to handle photos, especially photos taken with
     fisheye lenses, and convert them between different kinds of lenses, FoV, and
@@ -40,12 +39,11 @@ __doc__ = (
     # How it works
     This module uses the information you provide about the image format, lenses,
     and FoV, couples it with mathematical functions that describes the ways the
-    lenses behave, and makes use of trigonometry to map the pixels of your planar 
+    lenses behave, and makes use of trigonometry to map the pixels of your planar
     photos or panoramas to angles producing a sphere-like mappings.
-    
+
     Using a sphere as a base lets you rotate the image. It provides lens functions
     and and objects that let you re-take a picture from another one, using different
     lenses and FoV to produce new images. It also lets you map the camera images
     to an equirectangular panorama.
     """
-)
