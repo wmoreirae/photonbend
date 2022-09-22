@@ -46,4 +46,13 @@ __doc__ = """
     and and objects that let you re-take a picture from another one, using different
     lenses and FoV to produce new images. It also lets you map the camera images
     to an equirectangular panorama.
+    
+    # Install
+    Installing is simple using pip
+    
+    ```
+    pip install photonbend
+    ```
+    
+    For usage read the documentation for the photobend.core module
     """
