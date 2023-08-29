@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "photonbend"
-version = "1.0.0"
+version = "1.0.1"
 description = "Photonbend allows one to convert photos between different sorts of lenses, rotate photos and make panoramas."
 authors = ["Edson Moreira <w.moreirae@gmail.com>"]
 license = "MIT"

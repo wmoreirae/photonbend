@@ -85,14 +85,22 @@ def _rectilinear(theta: UniFloat) -> UniFloat:
         theta:
 
     """
-    if theta < 0:
-        raise ValueError("The angle theta cannot be negative")
-    if theta > to_radians(89):
-        raise ValueError(
-            "The Rectilinear lens can't handle FoV larger than 179 degrees"
-        )
-    return np.tan(theta)
+    if isinstance(theta, float):
+        if theta < 0:
+            raise ValueError("The angle theta cannot be negative")
+        if theta > to_radians(89):
+            raise ValueError(
+                "The Rectilinear lens can't handle FoV larger than 179 degrees"
+            )
+        return np.tan(theta)
+    else:
+        invalid_bellow = theta < 0 
+        invalid_above = theta > to_radians(89)
+        invalid = np.logical_or(invalid_bellow, invalid_above)
 
+        results = np.tan(theta)
+        results[invalid] = np.nan
+        return results
 
 def _stereographic_inverse(projection_in_f_units: UniFloat) -> UniFloat:
     """Inverse stereographic function.
